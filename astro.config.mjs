@@ -13,6 +13,8 @@ export default defineConfig({
     }),
     starlight({
       title: "前端doc",
+      logo: { src: "./src/assets/favicon.svg" },
+
       components: {
         // 重写默认的 `SocialIcons` 组件。
         SocialIcons: "./src/components/TopRightIcon.astro",
