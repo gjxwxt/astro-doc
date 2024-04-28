@@ -1,0 +1,5 @@
+{
+  "recommendations": ["astro-build.astro-vscode"],
+  "unwantedRecommendations": [],
+  // 保存时格式化
+}

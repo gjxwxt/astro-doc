@@ -1,0 +1,89 @@
+.website {
+  position: relative;
+  display: grid;
+  padding-top: 2vh;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  grid-template-columns: repeat(auto-fill, 46px);
+  grid-template-rows: repeat(auto-fill, 46px);
+  grid-auto-flow: dense;
+  grid-gap: 40px 23px;
+  box-sizing: border-box;
+  justify-content: center;
+  padding-bottom: 50px;
+}
+
+.app-group {
+  padding: 20px;
+}
+/* 移上去之后样式修改 */
+.app-group:hover {
+  background-color: #0000001a;
+  border-radius: 12px;
+}
+
+.app-item {
+  list-style-type: none;
+  position: relative;
+  grid-column: span 1;
+  grid-row: span 1;
+  height: 100%;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  margin-top: 0 !important;
+}
+.app-item-icon {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  font-size: 12px;
+  box-shadow: 0 0 5px #0000001a;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+.app-item-img {
+  display: block;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: none;
+}
+.d-text-txt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-weight: 500;
+  line-height: 1;
+  color: #fff;
+  transform: translate(-50%);
+  transform-origin: 0 center;
+  transform: scale(1.2) translate(-50%, -50%);
+  text-align: center;
+  white-space: nowrap;
+}
+.app-item-title {
+  width: calc(100% + 23px);
+  margin-left: -11.5px;
+  display: block;
+  margin-top: 6px;
+  text-align: center;
+  /* color: #fff; */
+  /* 溢出隐藏，单行省略 */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  line-height: 1.1;
+  filter: drop-shadow(0px 2px 7px rgba(0, 0, 0, 0.4));
+  color: var(--sl-color-gray-2);
+}

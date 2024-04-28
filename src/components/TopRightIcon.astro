@@ -1,0 +1,25 @@
+---
+import type { Props } from "@astrojs/starlight/props";
+import Default from "@astrojs/starlight/components/SocialIcons.astro";
+---
+
+<!-- 一个图标doc  /learn/react-ui/，一个图标home   -->
+<a href="/" class="sl-flex astro-vzx7cmgl">
+  <span>首页</span>
+  <!-- <svg aria-hidden="true" class="astro-vzx7cmgl astro-a2d222m3" width="16" height="16" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4268" xmlns:xlink="http://www.w3.org/1999/xlink" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-source-loc="16:2"><path d="M946.5 505L560.1 118.8l-25.9-25.9c-12.3-12.2-32.1-12.2-44.4 0L77.5 505c-12.3 12.3-18.9 28.6-18.8 46 0.4 35.2 29.7 63.3 64.9 63.3h42.5V940h691.8V614.3h43.4c17.1 0 33.2-6.7 45.3-18.8 12.1-12.1 18.7-28.2 18.7-45.3 0-17-6.7-33.1-18.8-45.2zM568 868H456V664h112v204z m217.9-325.7V868H632V640c0-22.1-17.9-40-40-40H432c-22.1 0-40 17.9-40 40v228H238.1V542.3h-96l370-369.7 23.1 23.1L882 542.3h-96.1z" fill="#3d50f5" p-id="4269"></path></svg> -->
+</a>
+<a href="/learn/react-ui/" class="sl-flex astro-vzx7cmgl">
+  <span>document</span>
+</a>
+<Default {...Astro.props}><slot /></Default>
+
+<style>
+  a {
+    text-decoration: none; /* 取消下划线 */
+    color: var(--sl-color-white);
+  }
+
+  a:hover {
+    text-decoration: underline; /* 鼠标悬停时添加下划线 */
+  }
+</style>
