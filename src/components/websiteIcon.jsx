@@ -186,8 +186,6 @@ export default ({ tag, defaultList }) => {
       onClick={closeMenuAndDialog}
       className="app-group"
     >
-      {/* 传入的tag */}
-      <p>{tag || "默认"}</p>
       <ul className="website">
         {iconList &&
           iconList.map((item) => {
@@ -199,7 +197,7 @@ export default ({ tag, defaultList }) => {
               >
                 <div
                   className="app-item-icon"
-                  title={item.name}
+                  title={item.description || item.name}
                   onClick={() => {
                     window.open(item.url);
                   }}
