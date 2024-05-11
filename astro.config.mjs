@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     // 服务器主机名，如果允许外部访问，可设置为 "0.0.0.0"
     host: "0.0.0.0",
-    port: 3001,
+    port: 3005,
     open: true,
   },
   integrations: [
