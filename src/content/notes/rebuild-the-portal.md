@@ -13,7 +13,7 @@ featured: true
 ## 现在的结构
 
 - **文档**继续用 Starlight，但整体移到 `/docs/`，和门户分开。
-- **笔记**是独立的 content collection，可以从 Obsidian 目录同步过来，也可以手写。
+- **笔记**是独立的 content collection，可以从本地目录同步过来，也可以手写。
 - **工具**是插件。每个插件有自己的 manifest、服务端 action 和界面，注册表自动发现。
 - **收藏**从代码里搬到了 `src/content/bookmarks.yaml`，按分类维护。
 - **搜索**在构建时生成一份全站索引，页面上的搜索、AI 助手和 MCP 共用同一份数据。
