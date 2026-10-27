@@ -1,0 +1,21 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+---
+
+<PortalLayout title="404" description="这个页面不存在。" noindex>
+  <div class="page page--narrow">
+    <header class="page-head">
+      <h1>404</h1>
+      <p>这个页面不存在，或者被移走了。</p>
+    </header>
+    <div class="letter">
+      <p>
+        可能是早期文档的地址变了。现在文档在 <a class="text-link" href="/docs/">/docs/</a>，收藏在
+        <a class="text-link" href="/bookmarks/">/bookmarks/</a>。
+      </p>
+      <p>
+        <a class="button" href="/">回到首页</a>
+      </p>
+    </div>
+  </div>
+</PortalLayout>

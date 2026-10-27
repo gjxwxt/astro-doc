@@ -1,0 +1,130 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+---
+
+<div class="rail-search" data-rail-search>
+  <div class="rail-search-field">
+    <Icon name="search" size={17} />
+    <input
+      type="search"
+      placeholder="搜索全站…"
+      autocomplete="off"
+      spellcheck="false"
+      aria-label="搜索全站"
+      aria-expanded="false"
+      aria-controls="rail-search-results"
+      data-rail-search-input
+    />
+    <kbd>⌘K</kbd>
+  </div>
+  <div class="rail-results" id="rail-search-results" data-rail-results hidden></div>
+</div>
+
+<script>
+  import { searchDocs, type SearchDoc } from '@/lib/search';
+
+  const root = document.querySelector<HTMLElement>('[data-rail-search]');
+  const input = root?.querySelector<HTMLInputElement>('[data-rail-search-input]');
+  const results = root?.querySelector<HTMLElement>('[data-rail-results]');
+  let entries: SearchDoc[] | null = null;
+  let loading: Promise<SearchDoc[]> | null = null;
+  let hits: SearchDoc[] = [];
+
+  function hide() {
+    if (!results || !input) return;
+    results.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+  }
+
+  function show(message: string) {
+    if (!results || !input) return;
+    results.replaceChildren();
+    const div = document.createElement('div');
+    div.className = 'rail-result-empty';
+    div.textContent = message;
+    results.append(div);
+    results.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function loadIndex(): Promise<SearchDoc[]> {
+    if (entries) return Promise.resolve(entries);
+    if (!loading) {
+      loading = fetch('/search-index.json')
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json() as Promise<{ entries: SearchDoc[] }>;
+        })
+        .then((data) => {
+          entries = data.entries;
+          return entries;
+        })
+        .catch((error) => {
+          loading = null;
+          throw error;
+        });
+    }
+    return loading;
+  }
+
+  function render(query: string) {
+    if (!results || !input) return;
+    const value = query.trim();
+    if (!value) {
+      hide();
+      return;
+    }
+    if (!entries) {
+      show('正在加载索引…');
+      return;
+    }
+
+    hits = searchDocs(entries, value, 5).map((hit) => hit.doc);
+    results.replaceChildren();
+    if (hits.length === 0) {
+      show(`没有找到「${value}」。`);
+      return;
+    }
+
+    for (const hit of hits) {
+      const link = document.createElement('a');
+      link.className = 'rail-result';
+      link.href = hit.url;
+      const type = document.createElement('small');
+      type.textContent = hit.type === 'note' ? '笔记' : hit.type === 'doc' ? '文档' : '工具';
+      const title = document.createElement('strong');
+      title.textContent = hit.title;
+      const description = document.createElement('span');
+      description.textContent = hit.description ?? hit.url;
+      link.append(type, title, description);
+      results.append(link);
+    }
+    results.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  input?.addEventListener('focus', () => {
+    loadIndex().catch(() => show('索引加载失败，请直接打开页面。'));
+  });
+
+  let timer: number | undefined;
+  input?.addEventListener('input', () => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => render(input.value), 90);
+  });
+
+  input?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      input.value = '';
+      hide();
+      input.blur();
+    } else if (event.key === 'Enter' && hits[0]) {
+      event.preventDefault();
+      window.location.href = hits[0].url;
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (root && event.target instanceof Node && !root.contains(event.target)) hide();
+  });
+</script>

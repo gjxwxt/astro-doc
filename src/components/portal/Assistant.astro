@@ -1,0 +1,269 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+---
+
+<div class="assistant" data-assistant>
+  <section class="assistant-panel" data-assistant-panel aria-label="站内助手" hidden>
+    <header class="assistant-head">
+      <Icon name="sparkles" size={16} />
+      <strong>站内助手</strong>
+      <span class="assistant-mode" data-assistant-mode>检索模式</span>
+      <button class="assistant-close" type="button" data-assistant-close aria-label="关闭助手">
+        <Icon name="x" size={15} />
+      </button>
+    </header>
+
+    <div class="assistant-messages" data-assistant-messages aria-live="polite"></div>
+
+    <div class="assistant-suggestions" data-assistant-suggestions>
+      <button type="button">这个站有哪些工具？</button>
+      <button type="button">最近写了什么？</button>
+      <button type="button">音乐工具怎么用？</button>
+    </div>
+
+    <form class="assistant-form" data-assistant-form>
+      <input
+        type="text"
+        name="message"
+        placeholder="问点什么…"
+        autocomplete="off"
+        maxlength="1200"
+        aria-label="给助手发消息"
+        data-assistant-input
+      />
+      <button type="submit" aria-label="发送" data-assistant-send>
+        <Icon name="send" size={16} />
+      </button>
+    </form>
+  </section>
+
+  <button
+    class="assistant-toggle"
+    type="button"
+    data-assistant-toggle
+    aria-label="打开站内助手"
+    aria-expanded="false"
+    aria-controls="assistant-panel"
+  >
+    <Icon name="chat" size={21} />
+  </button>
+</div>
+
+<script>
+  interface Message {
+    role: 'user' | 'assistant';
+    content: string;
+  }
+
+  interface Source {
+    title: string;
+    url: string;
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-assistant]');
+  const panel = root?.querySelector<HTMLElement>('[data-assistant-panel]');
+  const toggle = root?.querySelector<HTMLButtonElement>('[data-assistant-toggle]');
+  const closeButton = root?.querySelector<HTMLButtonElement>('[data-assistant-close]');
+  const form = root?.querySelector<HTMLFormElement>('[data-assistant-form]');
+  const input = root?.querySelector<HTMLInputElement>('[data-assistant-input]');
+  const send = root?.querySelector<HTMLButtonElement>('[data-assistant-send]');
+  const messagesElement = root?.querySelector<HTMLElement>('[data-assistant-messages]');
+  const suggestions = root?.querySelector<HTMLElement>('[data-assistant-suggestions]');
+  const modeLabel = root?.querySelector<HTMLElement>('[data-assistant-mode]');
+
+  const storageKey = 'portal-assistant-history';
+  let messages: Message[] = [{ role: 'assistant', content: '你好，我是这个站的助手。可以问我站里有什么工具、最近写了什么，或者让我帮你找一篇文档。' }];
+  let streaming = false;
+
+  try {
+    const saved = sessionStorage.getItem(storageKey);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Message[];
+      if (Array.isArray(parsed) && parsed.length > 0) messages = parsed.slice(-12);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  function save() {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(messages.slice(-12)));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderMarkdown(markdown: string): string {
+    let html = escapeHtml(markdown);
+    html = html.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    );
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return html
+      .split(/\n{2,}/)
+      .map((paragraph) => `<p>${paragraph.replaceAll('\n', '<br />')}</p>`)
+      .join('');
+  }
+
+  function addMessage(message: Message): HTMLElement {
+    if (!messagesElement) throw new Error('Assistant is not mounted.');
+    const element = document.createElement('div');
+    element.className = `assistant-msg assistant-msg--${message.role}`;
+    if (message.role === 'assistant') element.innerHTML = renderMarkdown(message.content);
+    else element.textContent = message.content;
+    messagesElement.append(element);
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+    return element;
+  }
+
+  function addSources(element: HTMLElement, sources: Source[]) {
+    if (sources.length === 0) return;
+    const list = document.createElement('div');
+    list.className = 'assistant-sources';
+    const label = document.createElement('span');
+    label.className = 'assistant-mode';
+    label.textContent = '站内来源';
+    list.append(label);
+    for (const source of sources.slice(0, 5)) {
+      const link = document.createElement('a');
+      link.href = source.url;
+      link.textContent = source.title;
+      list.append(link);
+    }
+    element.append(list);
+    messagesElement?.scrollTo({ top: messagesElement.scrollHeight });
+  }
+
+  function renderAll() {
+    if (!messagesElement) return;
+    messagesElement.replaceChildren();
+    for (const message of messages) addMessage(message);
+  }
+
+  function setOpen(open: boolean) {
+    if (!panel || !toggle) return;
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? '关闭站内助手' : '打开站内助手');
+    if (open) input?.focus();
+  }
+
+  async function ask(text: string) {
+    if (streaming || !text.trim()) return;
+    streaming = true;
+    if (send) send.disabled = true;
+    messages.push({ role: 'user', content: text.trim() });
+    addMessage(messages.at(-1)!);
+    save();
+    if (input) input.value = '';
+
+    const placeholder = addMessage({ role: 'assistant', content: '…' });
+    let answer = '';
+    let receivedSources: Source[] = [];
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: messages.filter((message) => message.role !== 'assistant' || message.content !== '…').slice(-10) }),
+      });
+
+      if (!response.ok || !response.body) {
+        const detail = await response.text().catch(() => '');
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const handleEvent = (event: string | undefined, data: Record<string, unknown>) => {
+        if (event === 'sources') {
+          receivedSources = (data.sources as Source[]) ?? [];
+          modeLabel && (modeLabel.textContent = data.mode === 'ai' ? 'AI 模式' : '检索模式');
+        } else if (event === 'token') {
+          answer += String(data.text ?? '');
+          placeholder.textContent = answer;
+          messagesElement?.scrollTo({ top: messagesElement.scrollHeight });
+        } else if (event === 'error') {
+          throw new Error(String(data.message ?? '生成失败'));
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf('\n\n');
+        while (boundary !== -1) {
+          const chunk = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const event = chunk.match(/^event: (.+)$/m)?.[1];
+          const dataText = chunk
+            .split('\n')
+            .filter((line) => line.startsWith('data: '))
+            .map((line) => line.slice(6))
+            .join('\n');
+          if (dataText) {
+            try {
+              handleEvent(event, JSON.parse(dataText) as Record<string, unknown>);
+            } catch (error) {
+              if (error instanceof Error) throw error;
+            }
+          }
+          boundary = buffer.indexOf('\n\n');
+        }
+      }
+
+      placeholder.innerHTML = renderMarkdown(answer || '没有拿到回答。');
+      addSources(placeholder, receivedSources);
+      messages.push({ role: 'assistant', content: answer || '没有拿到回答。' });
+      save();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请求失败';
+      placeholder.innerHTML = renderMarkdown(`请求失败：${message}\n\n可以试试直接打开 [工具](/tools/) 或 [笔记](/notes/)。`);
+      messages.push({ role: 'assistant', content: `请求失败：${message}` });
+      save();
+    } finally {
+      streaming = false;
+      if (send) send.disabled = false;
+      input?.focus();
+    }
+  }
+
+  toggle?.addEventListener('click', () => {
+    if (!panel) return;
+    setOpen(panel.hidden === true || panel.hidden === 'until-found');
+  });
+  closeButton?.addEventListener('click', () => setOpen(false));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && panel && !panel.hidden) setOpen(false);
+  });
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (input) void ask(input.value);
+  });
+
+  suggestions?.querySelectorAll('button').forEach((button) => {
+    button.addEventListener('click', () => {
+      const text = button.textContent ?? '';
+      if (input) input.value = text;
+      void ask(text);
+    });
+  });
+
+  renderAll();
+</script>

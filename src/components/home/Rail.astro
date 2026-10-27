@@ -1,0 +1,47 @@
+---
+import RailSearch from '@/components/portal/RailSearch.astro';
+import Icon from '@/components/ui/Icon.astro';
+import { siteConfig } from '@/config/site';
+import mark from '@/assets/mark.svg';
+
+---
+
+<aside class="rail">
+  <div class="rail-top">
+    <a class="rail-mark" href="/" aria-label={`${siteConfig.name} 的个人门户`}>
+      <img src={mark.src} alt="" width="32" height="32" />
+    </a>
+    <div class="header-actions">
+      <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="切换主题">
+        <span class="icon-moon"><Icon name="moon" size={17} /></span>
+        <span class="icon-sun"><Icon name="sun" size={17} /></span>
+      </button>
+      <a
+        class="icon-button"
+        href={siteConfig.github}
+        target="_blank"
+        rel="me noopener noreferrer"
+        aria-label="GitHub"
+      >
+        <Icon name="github" size={17} />
+      </a>
+    </div>
+  </div>
+
+  <h1>{siteConfig.name}<span class="visually-hidden">的个人门户</span></h1>
+  <p class="rail-lede">{siteConfig.intro}</p>
+
+  <RailSearch />
+
+  <nav class="rail-nav" aria-label="主导航">
+    {
+      siteConfig.nav.map((item) => (
+        <a href={item.href}>{item.label}</a>
+      ))
+    }
+  </nav>
+
+  <div class="rail-foot">
+    <span>现在 <span class="rail-clock" data-clock>--:--</span> · {siteConfig.now}</span>
+  </div>
+</aside>

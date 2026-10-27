@@ -1,0 +1,24 @@
+---
+import { siteConfig } from '@/config/site';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div>
+    <div>{siteConfig.title}</div>
+    <div>用 Astro 和 Starlight 搭的，内容优先。</div>
+  </div>
+  <nav aria-label="页脚导航">
+    <a href="/docs/">文档</a>
+    <a href="/library/">资料库</a>
+    <a href="/notes/">笔记</a>
+    <a href="/tools/">工具</a>
+    <a href="/bookmarks/">收藏</a>
+    <a href="/notes/rss.xml">RSS</a>
+  </nav>
+  <div class="footer-right">
+    <div>© {year} {siteConfig.name}</div>
+    <a href={siteConfig.github} target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+</footer>

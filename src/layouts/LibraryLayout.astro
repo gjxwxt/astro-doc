@@ -1,0 +1,80 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { formatDate, readingTime } from '@/lib/format';
+import { markdownToText } from '@/lib/markdown';
+
+interface Heading {
+  depth: number;
+  text: string;
+  slug: string;
+}
+
+interface Props {
+  entry: CollectionEntry<'library'>;
+  headings: Heading[];
+}
+
+const { entry, headings } = Astro.props;
+const minutes = readingTime(markdownToText(entry.body ?? ''));
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+---
+
+<PortalLayout title={entry.data.title} description={entry.data.description}>
+  <div class="note-shell">
+    <article class="note-article">
+      <header class="note-header" data-reveal>
+        <a class="library-back" href="/library/">← 资料库</a>
+        <h1>{entry.data.title}</h1>
+        <div class="note-meta">
+          <span>{entry.data.sectionTitle}</span>
+          {entry.data.date && <time datetime={entry.data.date.toISOString()}>{formatDate(entry.data.date)}</time>}
+          <span>{minutes} 分钟阅读</span>
+        </div>
+        {entry.data.description && <p class="note-lede">{entry.data.description}</p>}
+        {
+          entry.data.tags.length > 0 && (
+            <div class="note-tags">
+              {entry.data.tags.map((tag) => (
+                <span class="tag">{tag}</span>
+              ))}
+            </div>
+          )
+        }
+      </header>
+
+      <div class="prose" data-annotatable>
+        <slot />
+      </div>
+
+      <footer class="library-foot">
+        <a href="/library/">回到资料库</a>
+        {
+          entry.data.sourceUrl && (
+            <a href={entry.data.sourceUrl} target="_blank" rel="noreferrer">
+              查看原始来源 ↗
+            </a>
+          )
+        }
+      </footer>
+    </article>
+
+    <aside class="note-aside" aria-label="本页导航">
+      {
+        toc.length > 0 && (
+          <div class="aside-block">
+            <h2>本页目录</h2>
+            <nav class="toc">
+              {toc.map((heading) => (
+                <a href={`#${heading.slug}`} class:list={{ 'toc-depth-3': heading.depth === 3 }}>
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+          </div>
+        )
+      }
+    </aside>
+  </div>
+</PortalLayout>

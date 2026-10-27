@@ -1,0 +1,295 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+/* The global reset above removes the UA's `dialog { margin: auto }`,
+   which is what centers native modal dialogs. */
+dialog {
+  margin: auto;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+p,
+ul,
+ol,
+blockquote,
+pre,
+figure,
+table {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 480;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+code,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+kbd {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--lime);
+  color: var(--lime-ink);
+  font-size: 14px;
+  transform: translateY(-160%);
+  transition: transform 0.2s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--forest-900);
+  color: var(--paper);
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button:hover {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button--ghost {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.button--ghost:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+
+.button--small {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--link);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+.text-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime-2);
+}
+
+.status--beta::before {
+  background: var(--amber);
+}
+
+.status--needs-config::before {
+  background: var(--red);
+}
+
+.note {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.note strong {
+  color: var(--ink);
+}
+
+.error-box {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--red) 14%, var(--paper));
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+html.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+html.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html.js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}

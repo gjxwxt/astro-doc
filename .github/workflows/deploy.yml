@@ -1,0 +1,85 @@
+name: deploy-portal
+
+on:
+  repository_dispatch:
+    types: [obsidian-update]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout portal
+        uses: actions/checkout@v4
+
+      - name: Checkout private Obsidian content
+        uses: actions/checkout@v4
+        with:
+          repository: gjxwxt/write-space
+          ref: ${{ github.event.client_payload.sha || 'main' }}
+          path: obsidian-vault
+          ssh-key: ${{ secrets.OBSIDIAN_DEPLOY_KEY }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Sync library
+        run: pnpm sync:library --source obsidian-vault
+
+      - name: Build
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: pnpm build
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          release="${GITHUB_SHA::12}"
+          target="/opt/josh-portal/releases/$release"
+
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$target'"
+          tar -czf - dist | ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "tar -xzf - -C '$target'"
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "ln -sfn '$target' /opt/josh-portal/current && systemctl restart josh-portal && systemctl is-active josh-portal"
+
+      - name: Smoke test
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$SITE_URL/" || true)
+            if [ "$code" = "200" ]; then
+              echo "portal is up: $code"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "portal did not become healthy"
+          exit 1

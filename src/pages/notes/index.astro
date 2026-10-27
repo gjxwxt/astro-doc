@@ -1,0 +1,92 @@
+---
+import { getCollection } from 'astro:content';
+
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { formatDate } from '@/lib/format';
+
+const notes = (await getCollection('notes', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+const counts = new Map<string, number>();
+for (const note of notes) {
+  for (const tag of note.data.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+}
+const tags = [...counts.entries()]
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-CN'))
+  .slice(0, 8);
+---
+
+<PortalLayout title="笔记" description="更短、更随手的记录：重构、工具、阅读和一些没整理成文档的想法。">
+  <div class="page page--narrow">
+    <header class="page-head">
+      <h1>笔记</h1>
+      <p>更短、更随手的记录。比文档松一点，也比想法完整一点。可以同步，也可以直接写 Markdown。</p>
+    </header>
+
+    {
+      tags.length > 0 && (
+        <div class="notes-filter" data-notes-filter>
+          <button type="button" data-note-filter="" aria-pressed="true">
+            全部
+          </button>
+          {tags.map(([tag, count]) => (
+            <button type="button" data-note-filter={tag} aria-pressed="false">
+              {tag} {count}
+            </button>
+          ))}
+        </div>
+      )
+    }
+
+    {
+      notes.length === 0 ? (
+        <p class="note">还没有笔记。可以在 <code>src/content/notes/</code> 里新建一个 Markdown 文件。</p>
+      ) : (
+        <div class="notes-list" data-reveal-group>
+          {notes.map((note) => (
+            <a
+              class="note-row"
+              href={`/notes/${note.id}/`}
+              data-note-row
+              data-tags={note.data.tags.join('|')}
+              data-reveal
+            >
+              <time datetime={note.data.date.toISOString()}>{formatDate(note.data.date)}</time>
+              <div>
+                <h2>{note.data.title}</h2>
+                {note.data.description && <p>{note.data.description}</p>}
+                {note.data.tags.length > 0 && (
+                  <div class="note-tags">
+                    {note.data.tags.map((tag) => (
+                      <span class="tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span aria-hidden="true">→</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</PortalLayout>
+
+<script>
+  const filter = document.querySelector<HTMLElement>('[data-notes-filter]');
+  const rows = [...document.querySelectorAll<HTMLElement>('[data-note-row]')];
+
+  filter?.querySelectorAll<HTMLButtonElement>('[data-note-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tag = button.dataset.noteFilter ?? '';
+      filter.querySelectorAll('button').forEach((candidate) => {
+        candidate.setAttribute('aria-pressed', String(candidate === button));
+      });
+      for (const row of rows) {
+        const tags = (row.dataset.tags ?? '').split('|').filter(Boolean);
+        row.hidden = Boolean(tag) && !tags.includes(tag);
+      }
+    });
+  });
+</script>

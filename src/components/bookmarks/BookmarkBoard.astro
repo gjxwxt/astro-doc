@@ -1,0 +1,426 @@
+---
+import { emptyOverlay, mergeGroups, type BookmarkGroup } from '@/lib/bookmarks';
+import { faviconFallbackUrl, faviconUrl, hostname } from '@/lib/format';
+
+interface Props {
+  groups: BookmarkGroup[];
+}
+
+const { groups } = Astro.props;
+const initial = mergeGroups(groups, emptyOverlay());
+const json = JSON.stringify(groups).replaceAll('<', '\\u003c');
+---
+
+<div class="bookmark-board" data-bookmark-board>
+  <div class="bookmarks-toolbar">
+    <label class="bookmarks-filter">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.3-4.3"></path>
+      </svg>
+      <input type="search" placeholder="筛选收藏…" aria-label="筛选收藏" data-bookmark-filter />
+    </label>
+    <button class="button button--small" type="button" data-bookmark-add>添加收藏</button>
+    <label class="button button--small button--ghost" role="button">
+      导入
+      <input type="file" accept="application/json" hidden data-bookmark-import />
+    </label>
+    <button class="button button--small button--ghost" type="button" data-bookmark-export>
+      导出
+    </button>
+    <button class="button button--small button--ghost" type="button" data-bookmark-reset>
+      重置
+    </button>
+  </div>
+
+  <div data-bookmark-groups>
+    {
+      initial.map((group) => (
+        <section class="bookmark-group" data-group={group.id}>
+          <div class="bookmark-group-head">
+            <h2>{group.title}</h2>
+            <span data-count>{group.items.length}</span>
+          </div>
+          <ul class="bookmark-list">
+            {group.items.map((item) => (
+              <li class="bookmark-item" data-url={item.url}>
+                <a
+                  class="bookmark-link"
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span class="bookmark-favicon">
+                    <span class="bookmark-fallback" aria-hidden="true">
+                      {item.name.slice(0, 1)}
+                    </span>
+                    <img
+                      src={faviconUrl(item.url)}
+                      alt=""
+                      width="30"
+                      height="30"
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                      data-favicon
+                      data-favicon-fallback={faviconFallbackUrl(item.url)}
+                    />
+                  </span>
+                  <span class="bookmark-copy">
+                    <span class="bookmark-name">{item.name}</span>
+                    <span class="bookmark-desc">{item.description || hostname(item.url)}</span>
+                  </span>
+                </a>
+                <button class="bookmark-edit" type="button" aria-label={`编辑 ${item.name}`}>
+                  编辑
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+
+  <p class="muted" data-bookmark-empty hidden>没有匹配的收藏。</p>
+</div>
+
+<dialog class="bookmark-dialog" data-bookmark-dialog aria-label="编辑收藏">
+  <form class="bookmark-form" data-bookmark-form>
+    <h2 data-bookmark-dialog-title>添加收藏</h2>
+    <label>
+      名称
+      <input name="name" required maxlength="80" autocomplete="off" />
+    </label>
+    <label>
+      链接
+      <input name="url" type="url" required placeholder="https://example.com/" autocomplete="off" />
+    </label>
+    <label>
+      描述
+      <input name="description" maxlength="160" autocomplete="off" />
+    </label>
+    <label>
+      分类
+      <select name="group"></select>
+    </label>
+    <div class="bookmark-form-actions">
+      <button class="danger" type="button" data-bookmark-delete hidden>删除</button>
+      <button class="button button--small button--ghost" type="button" data-bookmark-cancel>
+        取消
+      </button>
+      <button class="button button--small" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<p class="toast" data-bookmark-toast role="status" aria-live="polite"></p>
+
+<script type="application/json" data-bookmark-data is:inline set:html={json}></script>
+
+<script>
+  import {
+    emptyOverlay,
+    mergeGroups,
+    normalizeOverlay,
+    type BookmarkGroup,
+    type BookmarkOverlay,
+  } from '@/lib/bookmarks';
+  import { faviconFallbackUrl, faviconUrl, hostname } from '@/lib/format';
+
+  const board = document.querySelector<HTMLElement>('[data-bookmark-board]');
+  const dataElement = document.querySelector<HTMLScriptElement>('[data-bookmark-data]');
+  const container = board?.querySelector<HTMLElement>('[data-bookmark-groups]');
+  const filterInput = board?.querySelector<HTMLInputElement>('[data-bookmark-filter]');
+  const emptyLabel = document.querySelector<HTMLElement>('[data-bookmark-empty]');
+  const dialog = document.querySelector<HTMLDialogElement>('[data-bookmark-dialog]');
+  const form = dialog?.querySelector<HTMLFormElement>('[data-bookmark-form]');
+  const groupSelect = form?.querySelector<HTMLSelectElement>('select[name="group"]');
+  const deleteButton = form?.querySelector<HTMLButtonElement>('[data-bookmark-delete]');
+  const dialogTitle = form?.querySelector<HTMLElement>('[data-bookmark-dialog-title]');
+  const toast = document.querySelector<HTMLElement>('[data-bookmark-toast]');
+
+  if (board && dataElement && container && form && groupSelect && dialog) {
+    const storageKey = 'portal-bookmarks:v1';
+    const defaults = JSON.parse(dataElement.textContent || '[]') as BookmarkGroup[];
+    let overlay: BookmarkOverlay = loadOverlay();
+    let editing: string | null = null;
+
+    function loadOverlay(): BookmarkOverlay {
+      try {
+        return normalizeOverlay(JSON.parse(localStorage.getItem(storageKey) ?? 'null')) ?? emptyOverlay();
+      } catch {
+        return emptyOverlay();
+      }
+    }
+
+    function persist() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(overlay));
+      } catch {
+        showToast('浏览器存储不可用，修改只在当前页面生效。');
+      }
+    }
+
+    function showToast(message: string) {
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('is-visible');
+      window.setTimeout(() => toast.classList.remove('is-visible'), 2200);
+    }
+
+    function makeFavicon(item: { name: string; url: string }): HTMLElement {
+      const wrap = document.createElement('span');
+      wrap.className = 'bookmark-favicon';
+      const fallback = document.createElement('span');
+      fallback.className = 'bookmark-fallback';
+      fallback.setAttribute('aria-hidden', 'true');
+      fallback.textContent = item.name.slice(0, 1);
+      const img = document.createElement('img');
+      img.src = faviconUrl(item.url);
+      img.alt = '';
+      img.width = 30;
+      img.height = 30;
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.dataset.favicon = '';
+      img.dataset.faviconFallback = faviconFallbackUrl(item.url);
+      wrap.append(fallback, img);
+      return wrap;
+    }
+
+    function makeItem(item: { name: string; url: string; description?: string }): HTMLElement {
+      const li = document.createElement('li');
+      li.className = 'bookmark-item';
+      li.dataset.url = item.url;
+
+      const link = document.createElement('a');
+      link.className = 'bookmark-link';
+      link.href = item.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      const copy = document.createElement('span');
+      copy.className = 'bookmark-copy';
+      const name = document.createElement('span');
+      name.className = 'bookmark-name';
+      name.textContent = item.name;
+      const desc = document.createElement('span');
+      desc.className = 'bookmark-desc';
+      desc.textContent = item.description || hostname(item.url);
+      copy.append(name, desc);
+      link.append(makeFavicon(item), copy);
+
+      const edit = document.createElement('button');
+      edit.className = 'bookmark-edit';
+      edit.type = 'button';
+      edit.textContent = '编辑';
+      edit.setAttribute('aria-label', `编辑 ${item.name}`);
+
+      li.append(link, edit);
+      return li;
+    }
+
+    function render(groups: BookmarkGroup[]) {
+      container!.replaceChildren();
+      for (const group of groups) {
+        const section = document.createElement('section');
+        section.className = 'bookmark-group';
+        section.dataset.group = group.id;
+
+        const head = document.createElement('div');
+        head.className = 'bookmark-group-head';
+        const title = document.createElement('h2');
+        title.textContent = group.title;
+        const count = document.createElement('span');
+        count.dataset.count = '';
+        count.textContent = String(group.items.length);
+        head.append(title, count);
+
+        const list = document.createElement('ul');
+        list.className = 'bookmark-list';
+        for (const item of group.items) list.append(makeItem(item));
+
+        section.append(head, list);
+        container!.append(section);
+      }
+      applyFilter(filterInput?.value ?? '');
+    }
+
+    function applyFilter(query: string) {
+      const value = query.trim().toLowerCase();
+      let visible = 0;
+      for (const group of container!.querySelectorAll<HTMLElement>('.bookmark-group')) {
+        let groupVisible = 0;
+        for (const item of group.querySelectorAll<HTMLElement>('.bookmark-item')) {
+          const match =
+            !value ||
+            (item.textContent ?? '').toLowerCase().includes(value) ||
+            (item.dataset.url ?? '').toLowerCase().includes(value);
+          item.hidden = !match;
+          if (match) {
+            groupVisible += 1;
+            visible += 1;
+          }
+        }
+        group.hidden = groupVisible === 0;
+        const count = group.querySelector<HTMLElement>('[data-count]');
+        if (count) count.textContent = String(groupVisible);
+      }
+      if (emptyLabel) emptyLabel.hidden = visible > 0;
+    }
+
+    function openDialog(
+      item?: { name: string; url: string; description?: string },
+      isEdit = false,
+    ) {
+      editing = isEdit && item ? item.url : null;
+      const nameInput = form!.querySelector<HTMLInputElement>('input[name="name"]')!;
+      const urlInput = form!.querySelector<HTMLInputElement>('input[name="url"]')!;
+      const descInput = form!.querySelector<HTMLInputElement>('input[name="description"]')!;
+
+      nameInput.value = item?.name ?? '';
+      urlInput.value = item?.url ?? '';
+      descInput.value = item?.description ?? '';
+      urlInput.readOnly = Boolean(isEdit);
+      if (deleteButton) deleteButton.hidden = !isEdit;
+      if (dialogTitle) dialogTitle.textContent = isEdit ? '编辑收藏' : '添加收藏';
+
+      const currentGroup = [...container!.querySelectorAll<HTMLElement>('.bookmark-group')]
+        .find((section) =>
+          [...section.querySelectorAll<HTMLElement>('.bookmark-item')].some(
+            (candidate) => candidate.dataset.url === item?.url,
+          ),
+        )
+        ?.dataset.group;
+      groupSelect!.value = currentGroup ?? defaults[0]?.id ?? '';
+      groupSelect!.disabled = Boolean(isEdit);
+
+      dialog!.showModal();
+      nameInput.focus();
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const name = String(data.get('name') ?? '').trim();
+      const url = String(data.get('url') ?? '').trim();
+      const description = String(data.get('description') ?? '').trim();
+      if (!name || !url) return;
+
+      if (editing) {
+        overlay.edits[editing] = { name, description };
+      } else {
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          showToast('链接格式不对。');
+          return;
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          showToast('只支持 http(s) 链接。');
+          return;
+        }
+        overlay.custom.push({
+          group: String(data.get('group') ?? defaults[0]?.id ?? 'services'),
+          name,
+          url,
+          description,
+        });
+      }
+
+      persist();
+      render(mergeGroups(defaults, overlay));
+      dialog.close();
+      showToast(editing ? '已更新。' : '已添加。');
+    });
+
+    deleteButton?.addEventListener('click', () => {
+      if (!editing) return;
+      overlay.hidden.push(editing);
+      delete overlay.edits[editing];
+      overlay.custom = overlay.custom.filter((item) => item.url !== editing);
+      persist();
+      render(mergeGroups(defaults, overlay));
+      dialog.close();
+      editing = null;
+      showToast('已隐藏；默认收藏不受影响。');
+    });
+
+    for (const group of defaults) {
+      const option = document.createElement('option');
+      option.value = group.id;
+      option.textContent = group.title;
+      groupSelect.append(option);
+    }
+
+    board.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.bookmark-edit');
+      if (!button) return;
+      const item = button.closest<HTMLElement>('.bookmark-item');
+      const url = item?.dataset.url;
+      if (!url) return;
+      openDialog(
+        {
+          name: item.querySelector<HTMLElement>('.bookmark-name')?.textContent ?? '',
+          url,
+          description: item.querySelector<HTMLElement>('.bookmark-desc')?.textContent ?? '',
+        },
+        true,
+      );
+    });
+
+    board.querySelector('[data-bookmark-add]')?.addEventListener('click', () => openDialog());
+    form.querySelector('[data-bookmark-cancel]')?.addEventListener('click', () => dialog.close());
+
+    board.querySelector('[data-bookmark-export]')?.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(overlay, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bookmark-overlay.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    board.querySelector('[data-bookmark-import]')?.addEventListener('change', async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const parsed = normalizeOverlay(JSON.parse(await file.text()));
+        if (!parsed) throw new Error('格式不对');
+        overlay = parsed;
+        persist();
+        render(mergeGroups(defaults, overlay));
+        showToast('已导入浏览器修改。');
+      } catch {
+        showToast('导入失败：不是有效的修改文件。');
+      }
+      (event.target as HTMLInputElement).value = '';
+    });
+
+    board.querySelector('[data-bookmark-reset]')?.addEventListener('click', () => {
+      if (!window.confirm('清空当前设备上的所有修改？默认收藏不受影响。')) return;
+      overlay = emptyOverlay();
+      persist();
+      render(mergeGroups(defaults, overlay));
+      showToast('已重置为默认收藏。');
+    });
+
+    filterInput?.addEventListener('input', () => applyFilter(filterInput.value));
+
+    if (overlay.hidden.length || overlay.custom.length || Object.keys(overlay.edits).length) {
+      render(mergeGroups(defaults, overlay));
+    }
+  }
+</script>

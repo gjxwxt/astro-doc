@@ -1,0 +1,89 @@
+---
+import { getCollection } from 'astro:content';
+
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { formatDate } from '@/lib/format';
+
+const docs = await getCollection('library');
+const sections = new Map<
+  string,
+  {
+    id: string;
+    title: string;
+    order: number;
+    docs: typeof docs;
+  }
+>();
+
+for (const doc of docs) {
+  const key = doc.data.section;
+  const current = sections.get(key);
+  if (current) {
+    current.docs.push(doc);
+  } else {
+    sections.set(key, {
+      id: key,
+      title: doc.data.sectionTitle,
+      order: doc.data.sectionOrder,
+      docs: [doc],
+    });
+  }
+}
+
+const orderedSections = [...sections.values()].sort(
+  (a, b) => a.order - b.order || a.title.localeCompare(b.title, 'zh-CN'),
+);
+
+for (const section of orderedSections) {
+  section.docs.sort((a, b) => {
+    const aDate = a.data.date?.getTime() ?? 0;
+    const bDate = b.data.date?.getTime() ?? 0;
+    return bDate - aDate || a.data.title.localeCompare(b.data.title, 'zh-CN');
+  });
+}
+---
+
+<PortalLayout title="资料库" description="公开笔记按主题整理，和手写文档分开。">
+  <div class="page page--narrow">
+    <header class="page-head">
+      <h1>资料库</h1>
+      <p>公开的概念、来源和文章各自归位，和手写文档分开。</p>
+    </header>
+
+    {
+      orderedSections.length === 0 ? (
+        <p class="note">资料库还没有公开内容。</p>
+      ) : (
+        <div class="library-sections">
+          {orderedSections.map((section) => (
+            <section class="library-section" aria-labelledby={`section-${section.id}`}>
+              <div class="library-section-head">
+                <h2 id={`section-${section.id}`}>{section.title}</h2>
+                <span>{section.docs.length} 篇</span>
+              </div>
+              <div class="library-grid">
+                {section.docs.map((doc) => (
+                  <a class="library-card" href={`/library/${doc.id}/`}>
+                    <div class="library-card-meta">
+                      {doc.data.kind && <span>{doc.data.kind}</span>}
+                      {doc.data.date && <time datetime={doc.data.date.toISOString()}>{formatDate(doc.data.date)}</time>}
+                    </div>
+                    <h3>{doc.data.title}</h3>
+                    {doc.data.description && <p>{doc.data.description}</p>}
+                    {doc.data.tags.length > 0 && (
+                      <div class="note-tags">
+                        {doc.data.tags.slice(0, 3).map((tag) => (
+                          <span class="tag">{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</PortalLayout>

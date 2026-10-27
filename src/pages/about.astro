@@ -1,0 +1,53 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { siteConfig } from '@/config/site';
+---
+
+<PortalLayout title="关于" description="关于 Josh，以及这个站为什么长这样。">
+  <div class="page page--narrow">
+    <header class="page-head">
+      <h1>关于</h1>
+      <p>我是 Josh，前端开发。这里放文档、笔记、工具和收藏，也放一些还在长的东西。</p>
+    </header>
+
+    <div class="letter" data-reveal>
+      <p>这个站最早是一个 Starlight 文档模板，后来加了一个硬编码的网址导航。文档、导航和样式混在一起，改起来越来越费劲，所以 2026 年重做了一次。</p>
+      <p>现在它被拆成四个部分：文档用来放整理过的长内容，笔记记录更随手的想法，工具是能直接用的插件，收藏是每天会点开的入口。它们共享一套样式和一份搜索索引，但各自独立。</p>
+      <p>页面尽量预渲染成静态 HTML；只有需要联网的工具和 AI 助手走服务端。AI 助手不配置 key 也能用，会退化成站内检索，不会因为一个 key 缺失就整个不可用。</p>
+      <p class="signature">{siteConfig.name}</p>
+    </div>
+
+    <section class="home-section" aria-labelledby="now-title">
+      <div class="section-head">
+        <h2 id="now-title">现在</h2>
+      </div>
+      <div class="letter">
+        <p>{siteConfig.now}</p>
+        <p>最近在做的事：把常用的小工具接进插件系统，整理早期写得比较散的文档，偶尔写一点重构记录。</p>
+      </div>
+    </section>
+
+    <section class="home-section" aria-labelledby="stack-title">
+      <div class="section-head">
+        <h2 id="stack-title">技术栈</h2>
+      </div>
+      <div class="letter">
+        <p>Astro 7 负责页面和内容集合，Starlight 负责文档，Node adapter 只跑 API。样式是手写的 CSS，没有 Tailwind，也没有前端框架运行时。搜索索引在构建时生成，页面、AI 助手和 MCP 共用。</p>
+        <p>
+          源码在 <a class="text-link" href={siteConfig.github} target="_blank" rel="noopener noreferrer">GitHub</a>，笔记可以同步过来。评论用 Giscus，私人划线和批注只存在浏览器里。
+        </p>
+      </div>
+    </section>
+
+    <section class="home-section" aria-labelledby="contact-title">
+      <div class="section-head">
+        <h2 id="contact-title">联系</h2>
+      </div>
+      <div class="letter">
+        <p>
+          想讨论什么，直接开 <a class="text-link" href={`${siteConfig.github}/astro-doc/issues`} target="_blank" rel="noopener noreferrer">issue</a>，或者在笔记下面留言。邮件暂时不放在页面上，避免被抓。
+        </p>
+      </div>
+    </section>
+  </div>
+</PortalLayout>

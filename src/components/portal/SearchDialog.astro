@@ -1,0 +1,212 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+---
+
+<dialog class="search-dialog" data-search-dialog aria-label="搜索全站">
+  <div class="search-dialog-head">
+    <Icon name="search" size={18} />
+    <input
+      type="search"
+      placeholder="搜索文档、笔记和工具…"
+      autocomplete="off"
+      spellcheck="false"
+      aria-controls="search-results"
+      aria-autocomplete="list"
+      aria-label="搜索全站"
+    />
+    <button class="icon-button" type="button" data-search-close aria-label="关闭搜索">
+      <Icon name="x" size={16} />
+    </button>
+  </div>
+  <div class="search-dialog-body" id="search-results" data-search-results role="listbox"></div>
+  <div class="search-hint">
+    <span><kbd>↑</kbd> <kbd>↓</kbd> 选择</span>
+    <span><kbd>Enter</kbd> 打开</span>
+    <span><kbd>Esc</kbd> 关闭</span>
+  </div>
+</dialog>
+
+<script>
+  import { highlightParts, searchDocs, type SearchDoc } from '@/lib/search';
+
+  const dialog = document.querySelector<HTMLDialogElement>('[data-search-dialog]');
+  const input = dialog?.querySelector<HTMLInputElement>('input[type="search"]');
+  const results = dialog?.querySelector<HTMLElement>('[data-search-results]');
+  let entries: SearchDoc[] | null = null;
+  let loading: Promise<SearchDoc[]> | null = null;
+  let hits: SearchDoc[] = [];
+  let active = -1;
+
+  const typeLabels: Record<string, string> = {
+    note: '笔记',
+    doc: '文档',
+    library: '资料库',
+    tool: '工具',
+    page: '页面',
+  };
+
+  function setMessage(message: string) {
+    if (!results) return;
+    results.replaceChildren();
+    const div = document.createElement('div');
+    div.className = 'search-empty';
+    div.textContent = message;
+    results.append(div);
+  }
+
+  function loadIndex(): Promise<SearchDoc[]> {
+    if (entries) return Promise.resolve(entries);
+    if (!loading) {
+      loading = fetch('/search-index.json')
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json() as Promise<{ entries: SearchDoc[] }>;
+        })
+        .then((data) => {
+          entries = data.entries;
+          return entries;
+        })
+        .catch((error) => {
+          loading = null;
+          throw error;
+        });
+    }
+    return loading;
+  }
+
+  function setActive(index: number) {
+    if (!results || hits.length === 0) return;
+    const items = [...results.querySelectorAll<HTMLElement>('.search-hit')];
+    active = (index + hits.length) % hits.length;
+    items.forEach((item, itemIndex) => {
+      item.classList.toggle('is-active', itemIndex === active);
+    });
+    input?.setAttribute('aria-activedescendant', `search-hit-${active}`);
+    items[active]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function render(query: string) {
+    if (!results) return;
+    if (!query.trim()) {
+      hits = [];
+      setMessage('输入关键词，搜索文档、笔记、工具和页面。');
+      return;
+    }
+    if (!entries) {
+      setMessage('正在加载索引…');
+      return;
+    }
+
+    const found = searchDocs(entries, query, 12);
+    hits = found.map((hit) => hit.doc);
+    active = -1;
+    results.replaceChildren();
+
+    if (found.length === 0) {
+      setMessage(`没有找到和「${query}」相关的内容。`);
+      return;
+    }
+
+    found.forEach((hit, index) => {
+      const link = document.createElement('a');
+      link.className = 'search-hit';
+      link.href = hit.doc.url;
+      link.id = `search-hit-${index}`;
+      link.setAttribute('role', 'option');
+
+      const type = document.createElement('span');
+      type.className = 'search-hit-type';
+      type.textContent = typeLabels[hit.doc.type] ?? '页面';
+
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = hit.doc.title;
+      const description = document.createElement('p');
+      for (const part of highlightParts(hit.snippet || hit.doc.description || '', query)) {
+        if (part.match) {
+          const mark = document.createElement('mark');
+          mark.textContent = part.text;
+          description.append(mark);
+        } else {
+          description.append(part.text);
+        }
+      }
+
+      copy.append(title, description);
+      const arrow = document.createElement('span');
+      arrow.className = 'search-hit-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      link.append(type, copy, arrow);
+      results.append(link);
+    });
+
+    setActive(0);
+  }
+
+  let timer: number | undefined;
+
+  function searchSoon() {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      const query = input?.value ?? '';
+      if (!entries) {
+        setMessage('正在加载索引…');
+        loadIndex()
+          .then(() => render(query))
+          .catch(() => setMessage('索引加载失败，试试直接打开文档、笔记或工具页面。'));
+        return;
+      }
+      render(query);
+    }, 90);
+  }
+
+  function openDialog() {
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    input?.focus();
+    input?.select();
+    if (!entries) {
+      loadIndex()
+        .then(() => {
+          if (input?.value) render(input.value);
+        })
+        .catch(() => setMessage('索引加载失败，试试直接打开文档、笔记或工具页面。'));
+    } else if (!input?.value) {
+      render('');
+    }
+  }
+
+  document.querySelectorAll('[data-search-open]').forEach((trigger) => {
+    trigger.addEventListener('click', openDialog);
+  });
+
+  dialog?.querySelector('[data-search-close]')?.addEventListener('click', () => dialog.close());
+
+  dialog?.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  input?.addEventListener('input', searchSoon);
+
+  input?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActive(active + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActive(active - 1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const target = hits[active] ?? hits[0];
+      if (target) window.location.href = target.url;
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      openDialog();
+    }
+  });
+</script>

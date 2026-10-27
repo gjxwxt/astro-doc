@@ -1,0 +1,279 @@
+---
+import '@/styles/tools.css';
+---
+
+<div class="tool-ui" data-devkit>
+  <div class="devkit-tabs" role="tablist" aria-label="开发者工具">
+    <button class="devkit-tab" type="button" role="tab" data-devkit-tab="json" aria-selected="true">
+      JSON
+    </button>
+    <button class="devkit-tab" type="button" role="tab" data-devkit-tab="timestamp" aria-selected="false">
+      时间戳
+    </button>
+    <button class="devkit-tab" type="button" role="tab" data-devkit-tab="base64" aria-selected="false">
+      Base64
+    </button>
+    <button class="devkit-tab" type="button" role="tab" data-devkit-tab="hash" aria-selected="false">
+      哈希
+    </button>
+  </div>
+
+  <section class="devkit-panel" role="tabpanel" data-devkit-panel="json">
+    <p class="devkit-hint">在浏览器里完成，内容不会上传。</p>
+    <label class="tool-label">
+      JSON
+      <textarea class="tool-textarea" data-json-input spellcheck="false" placeholder='{"hello": "world"}'></textarea>
+    </label>
+    <div class="tool-actions">
+      <button class="button button--small" type="button" data-json-format>格式化</button>
+      <button class="button button--small button--ghost" type="button" data-json-minify>压缩</button>
+      <button class="button button--small button--ghost" type="button" data-json-copy>复制结果</button>
+    </div>
+    <div class="tool-error" data-json-error hidden></div>
+    <pre class="tool-output" data-json-output>（结果会出现在这里）</pre>
+  </section>
+
+  <section class="devkit-panel" role="tabpanel" data-devkit-panel="timestamp" hidden>
+    <p class="devkit-hint">时间戳按秒计算，本地时间使用浏览器时区。</p>
+    <div class="tool-grid">
+      <label class="tool-label">
+        Unix 时间戳
+        <input class="tool-input" data-ts-input type="number" placeholder="1760000000" />
+      </label>
+      <label class="tool-label">
+        本地时间
+        <input class="tool-input" data-datetime-input type="datetime-local" />
+      </label>
+    </div>
+    <div class="tool-actions">
+      <button class="button button--small" type="button" data-ts-convert>换算时间戳</button>
+      <button class="button button--small button--ghost" type="button" data-datetime-convert>
+        换算本地时间
+      </button>
+      <button class="button button--small button--ghost" type="button" data-ts-now>当前时间</button>
+    </div>
+    <div class="tool-error" data-ts-error hidden></div>
+    <pre class="tool-output" data-ts-output>（结果会出现在这里）</pre>
+  </section>
+
+  <section class="devkit-panel" role="tabpanel" data-devkit-panel="base64" hidden>
+    <p class="devkit-hint">支持中文和 emoji，按 UTF-8 处理。</p>
+    <textarea class="tool-textarea" data-base64-input spellcheck="false" placeholder="输入文本或 Base64"></textarea>
+    <div class="tool-actions">
+      <button class="button button--small" type="button" data-base64-encode>编码</button>
+      <button class="button button--small button--ghost" type="button" data-base64-decode>解码</button>
+      <button class="button button--small button--ghost" type="button" data-base64-copy>复制结果</button>
+    </div>
+    <div class="tool-error" data-base64-error hidden></div>
+    <pre class="tool-output" data-base64-output>（结果会出现在这里）</pre>
+  </section>
+
+  <section class="devkit-panel" role="tabpanel" data-devkit-panel="hash" hidden>
+    <p class="devkit-hint">哈希在服务端计算，文本会随请求发送到本站。</p>
+    <textarea class="tool-textarea" data-hash-input spellcheck="false" placeholder="要计算哈希的文本"></textarea>
+    <div class="tool-inline">
+      <select class="tool-input" data-hash-algorithm aria-label="哈希算法">
+        <option value="sha256">SHA-256</option>
+        <option value="sha512">SHA-512</option>
+      </select>
+      <button class="button button--small" type="button" data-hash-run>计算</button>
+    </div>
+    <div class="tool-error" data-hash-error hidden></div>
+    <div class="devkit-hash" data-hash-result></div>
+  </section>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-devkit]');
+
+  function activePanel(name: string) {
+    root?.querySelectorAll<HTMLButtonElement>('[data-devkit-tab]').forEach((button) => {
+      button.setAttribute('aria-selected', String(button.dataset.devkitTab === name));
+    });
+    root?.querySelectorAll<HTMLElement>('[data-devkit-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.devkitPanel !== name;
+    });
+  }
+
+  root?.querySelectorAll<HTMLButtonElement>('[data-devkit-tab]').forEach((button) => {
+    button.addEventListener('click', () => activePanel(button.dataset.devkitTab ?? 'json'));
+  });
+
+  function setError(element: HTMLElement | null | undefined, message: string) {
+    if (!element) return;
+    element.hidden = !message;
+    element.textContent = message;
+  }
+
+  function setOutput(element: HTMLElement | null | undefined, value: string) {
+    if (!element) return;
+    element.textContent = value;
+  }
+
+  async function copy(text: string, button: HTMLButtonElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const previous = button.textContent;
+      button.textContent = '已复制';
+      window.setTimeout(() => (button.textContent = previous), 1200);
+    } catch {
+      setError(root?.querySelector<HTMLElement>('[data-json-error]') ?? null, '复制失败，手动选中吧。');
+    }
+  }
+
+  // JSON
+  const jsonInput = root?.querySelector<HTMLTextAreaElement>('[data-json-input]');
+  const jsonOutput = root?.querySelector<HTMLElement>('[data-json-output]');
+  const jsonError = root?.querySelector<HTMLElement>('[data-json-error]');
+
+  function transformJson(minify: boolean) {
+    if (!jsonInput) return;
+    setError(jsonError, '');
+    try {
+      const value = JSON.parse(jsonInput.value);
+      setOutput(jsonOutput, JSON.stringify(value, null, minify ? 0 : 2));
+    } catch (error) {
+      setError(jsonError, `解析失败：${error instanceof Error ? error.message : '不是合法 JSON'}`);
+      setOutput(jsonOutput, '');
+    }
+  }
+
+  root?.querySelector('[data-json-format]')?.addEventListener('click', () => transformJson(false));
+  root?.querySelector('[data-json-minify]')?.addEventListener('click', () => transformJson(true));
+  root
+    ?.querySelector<HTMLButtonElement>('[data-json-copy]')
+    ?.addEventListener('click', (event) => {
+      const button = event.currentTarget as HTMLButtonElement;
+      void copy(jsonOutput?.textContent ?? '', button);
+    });
+
+  // Timestamp
+  const tsInput = root?.querySelector<HTMLInputElement>('[data-ts-input]');
+  const datetimeInput = root?.querySelector<HTMLInputElement>('[data-datetime-input]');
+  const tsOutput = root?.querySelector<HTMLElement>('[data-ts-output]');
+  const tsError = root?.querySelector<HTMLElement>('[data-ts-error]');
+
+  function describe(date: Date) {
+    if (Number.isNaN(date.getTime())) throw new Error('时间不合法');
+    return [
+      `本地：${date.toLocaleString('zh-CN', { hour12: false })}`,
+      `ISO：${date.toISOString()}`,
+      `UTC：${date.toUTCString()}`,
+      `秒：${Math.floor(date.getTime() / 1000)}`,
+      `毫秒：${date.getTime()}`,
+    ].join('\n');
+  }
+
+  root?.querySelector('[data-ts-convert]')?.addEventListener('click', () => {
+    setError(tsError, '');
+    try {
+      const value = Number(tsInput?.value);
+      if (!Number.isFinite(value)) throw new Error('请输入数字时间戳');
+      setOutput(tsOutput, describe(new Date(value * 1000)));
+    } catch (error) {
+      setError(tsError, error instanceof Error ? error.message : '换算失败');
+    }
+  });
+
+  root?.querySelector('[data-datetime-convert]')?.addEventListener('click', () => {
+    setError(tsError, '');
+    try {
+      if (!datetimeInput?.value) throw new Error('请选择一个时间');
+      const date = new Date(datetimeInput.value);
+      setOutput(tsOutput, describe(date));
+    } catch (error) {
+      setError(tsError, error instanceof Error ? error.message : '换算失败');
+    }
+  });
+
+  root?.querySelector('[data-ts-now]')?.addEventListener('click', () => {
+    const now = new Date();
+    if (tsInput) tsInput.value = String(Math.floor(now.getTime() / 1000));
+    setError(tsError, '');
+    setOutput(tsOutput, describe(now));
+  });
+
+  // Base64
+  const base64Input = root?.querySelector<HTMLTextAreaElement>('[data-base64-input]');
+  const base64Output = root?.querySelector<HTMLElement>('[data-base64-output]');
+  const base64Error = root?.querySelector<HTMLElement>('[data-base64-error]');
+
+  function encodeBase64(text: string): string {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }
+
+  function decodeBase64(text: string): string {
+    const binary = atob(text.trim());
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  root?.querySelector('[data-base64-encode]')?.addEventListener('click', () => {
+    setError(base64Error, '');
+    try {
+      setOutput(base64Output, encodeBase64(base64Input?.value ?? ''));
+    } catch (error) {
+      setError(base64Error, error instanceof Error ? error.message : '编码失败');
+    }
+  });
+
+  root?.querySelector('[data-base64-decode]')?.addEventListener('click', () => {
+    setError(base64Error, '');
+    try {
+      setOutput(base64Output, decodeBase64(base64Input?.value ?? ''));
+    } catch {
+      setError(base64Error, '不是合法的 Base64。');
+    }
+  });
+
+  root
+    ?.querySelector<HTMLButtonElement>('[data-base64-copy]')
+    ?.addEventListener('click', (event) => {
+      void copy(base64Output?.textContent ?? '', event.currentTarget as HTMLButtonElement);
+    });
+
+  // Hash
+  const hashInput = root?.querySelector<HTMLTextAreaElement>('[data-hash-input]');
+  const hashAlgorithm = root?.querySelector<HTMLSelectElement>('[data-hash-algorithm]');
+  const hashResult = root?.querySelector<HTMLElement>('[data-hash-result]');
+  const hashError = root?.querySelector<HTMLElement>('[data-hash-error]');
+
+  root?.querySelector('[data-hash-run]')?.addEventListener('click', async () => {
+    setError(hashError, '');
+    if (hashResult) hashResult.replaceChildren();
+    try {
+      const response = await fetch('/api/tools/devkit/hash', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          text: hashInput?.value ?? '',
+          algorithm: hashAlgorithm?.value ?? 'sha256',
+        }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        data?: { algorithm: string; hex: string; base64: string; length: number };
+        error?: { message: string };
+      };
+      if (!response.ok || !payload.ok || !payload.data) {
+        setError(hashError, payload.error?.message ?? '计算失败');
+        return;
+      }
+      if (hashResult) {
+        const label = document.createElement('p');
+        label.className = 'devkit-hint';
+        label.textContent = `${payload.data.algorithm} · ${payload.data.length} 个字符`;
+        const hex = document.createElement('code');
+        hex.textContent = `hex: ${payload.data.hex}`;
+        const base64 = document.createElement('code');
+        base64.textContent = `base64: ${payload.data.base64}`;
+        hashResult.append(label, hex, base64);
+      }
+    } catch {
+      setError(hashError, '请求失败，稍后再试。');
+    }
+  });
+</script>

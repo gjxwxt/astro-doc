@@ -1,0 +1,271 @@
+---
+import '@/styles/tools.css';
+---
+
+<div class="tool-ui" data-music>
+  <form class="tool-form" data-music-form role="search">
+    <input
+      type="search"
+      name="query"
+      placeholder="歌名、歌手，或「歌名 歌手」"
+      autocomplete="off"
+      aria-label="搜索歌曲"
+      maxlength="80"
+      data-music-input
+    />
+    <button class="button" type="submit">搜索</button>
+  </form>
+
+  <div class="music-chips">
+    <button class="music-chip" type="button" data-music-suggestion="晴天 周杰伦">晴天 周杰伦</button>
+    <button class="music-chip" type="button" data-music-suggestion="陈奕迅">陈奕迅</button>
+    <button class="music-chip" type="button" data-music-suggestion="周深">周深</button>
+    <button class="music-chip" type="button" data-music-suggestion="Nujabes">Nujabes</button>
+  </div>
+
+  <div class="music-toolbar">
+    <label class="music-option">
+      <input type="checkbox" data-music-lyrics checked />
+      <span>同时下载歌词</span>
+    </label>
+    <span class="music-quality">标准音质 MP3</span>
+  </div>
+
+  <p class="tool-note">
+    搜索后点“下载”。勾选歌词时会打包成 zip；没有歌词的歌曲只提供 MP3。
+  </p>
+
+  <div class="tool-error" data-music-error hidden></div>
+  <div class="music-status" data-music-status aria-live="polite" hidden></div>
+  <div class="music-results" data-music-results>
+    <div class="tool-empty">输入关键词，或点上面的例子。</div>
+  </div>
+</div>
+
+<script>
+  interface Track {
+    token: string;
+    title: string;
+    artist: string;
+    album?: string;
+    duration?: number;
+    cover?: string;
+  }
+
+  interface SearchData {
+    query: string;
+    count: number;
+    results: Track[];
+  }
+
+  interface ApiResponse<T> {
+    ok: boolean;
+    data?: T;
+    error?: { code: string; message: string; extra?: { hint?: string } };
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-music]');
+  const form = root?.querySelector<HTMLFormElement>('[data-music-form]');
+  const input = root?.querySelector<HTMLInputElement>('[data-music-input]');
+  const results = root?.querySelector<HTMLElement>('[data-music-results]');
+  const errorBox = root?.querySelector<HTMLElement>('[data-music-error]');
+  const statusBox = root?.querySelector<HTMLElement>('[data-music-status]');
+  const lyricsToggle = root?.querySelector<HTMLInputElement>('[data-music-lyrics]');
+
+  function showError(message: string, hint?: string) {
+    if (!errorBox) return;
+    errorBox.hidden = false;
+    errorBox.textContent = hint ? `${message} ${hint}` : message;
+  }
+
+  function clearError() {
+    if (errorBox) errorBox.hidden = true;
+  }
+
+  function setStatus(text: string, tone = '') {
+    if (!statusBox) return;
+    statusBox.hidden = !text;
+    statusBox.textContent = text;
+    statusBox.dataset.tone = tone;
+  }
+
+  function message(text: string, className = 'tool-empty') {
+    if (!results) return;
+    results.replaceChildren();
+    const div = document.createElement('div');
+    div.className = className;
+    div.textContent = text;
+    results.append(div);
+  }
+
+  function formatDuration(seconds?: number): string {
+    if (!seconds) return '';
+    const total = Math.max(0, Math.round(seconds));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  function filenameFromDisposition(value: string): string {
+    const star = value.match(/filename\*=UTF-8''([^;]+)/i);
+    if (star) {
+      try {
+        return decodeURIComponent(star[1]);
+      } catch {
+        // fall through to the ASCII filename
+      }
+    }
+    return value.match(/filename="([^"]+)"/i)?.[1] ?? '';
+  }
+
+  async function downloadTrack(track: Track, button: HTMLButtonElement) {
+    clearError();
+    const includeLyrics = lyricsToggle?.checked ?? true;
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = '打包…';
+    setStatus(`正在准备「${track.title}」…`);
+
+    try {
+      const response = await fetch('/api/tools/music/download', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token: track.token,
+          title: track.title,
+          artist: track.artist,
+          includeLyrics,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as ApiResponse<unknown> | null;
+        showError(payload?.error?.message ?? '下载失败。', payload?.error?.extra?.hint);
+        setStatus('下载失败，换一个结果试试。', 'error');
+        return;
+      }
+
+      const blob = await response.blob();
+      const filename =
+        filenameFromDisposition(response.headers.get('content-disposition') ?? '') ||
+        `${track.artist} - ${track.title}.${includeLyrics ? 'zip' : 'mp3'}`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      const size = blob.size > 0 ? ` · ${(blob.size / 1024 / 1024).toFixed(1)} MB` : '';
+      const noLyrics = response.headers.get('x-music-lyrics') === 'none';
+      setStatus(noLyrics ? `没有找到歌词，已下载 MP3${size}` : `已下载${size}`, 'success');
+      button.textContent = '已下载';
+      window.setTimeout(() => {
+        button.textContent = oldLabel;
+      }, 1800);
+    } catch {
+      showError('下载失败，检查网络后再试。');
+      setStatus('下载失败。', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function makeRow(track: Track): HTMLElement {
+    const row = document.createElement('article');
+    row.className = 'music-row music-row--download';
+
+    if (track.cover) {
+      const image = document.createElement('img');
+      image.className = 'music-art';
+      image.src = track.cover.replace(/^http:/, 'https:');
+      image.alt = '';
+      image.width = 44;
+      image.height = 44;
+      image.loading = 'lazy';
+      image.addEventListener('error', () => image.remove());
+      row.append(image);
+    } else {
+      const fallback = document.createElement('div');
+      fallback.className = 'music-art music-art--empty';
+      fallback.textContent = '♪';
+      row.append(fallback);
+    }
+
+    const copy = document.createElement('div');
+    copy.className = 'music-copy';
+    const title = document.createElement('strong');
+    title.textContent = track.title;
+    const meta = document.createElement('span');
+    meta.textContent = [track.artist, track.album].filter(Boolean).join(' · ');
+    copy.append(title, meta);
+
+    const duration = document.createElement('span');
+    duration.className = 'music-duration';
+    duration.textContent = formatDuration(track.duration);
+
+    const button = document.createElement('button');
+    button.className = 'music-download';
+    button.type = 'button';
+    button.dataset.trackToken = track.token;
+    button.textContent = '下载';
+    button.setAttribute('aria-label', `下载 ${track.title}`);
+    button.addEventListener('click', () => void downloadTrack(track, button));
+
+    row.append(copy, duration, button);
+    return row;
+  }
+
+  async function search(query: string) {
+    if (!query.trim()) return;
+    clearError();
+    setStatus('正在搜索…', 'loading');
+    message('搜索中…', 'tool-loading');
+
+    try {
+      const response = await fetch('/api/tools/music/search', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query, limit: 12 }),
+      });
+      const payload = (await response.json()) as ApiResponse<SearchData>;
+      if (!response.ok || !payload.ok || !payload.data) {
+        showError(payload.error?.message ?? '搜索失败。', payload.error?.extra?.hint);
+        message('没有拿到结果。');
+        setStatus('搜索失败。', 'error');
+        return;
+      }
+
+      const data = payload.data;
+      if (data.results.length === 0) {
+        message(`没有找到「${data.query}」。试试「歌名 歌手」。`);
+        setStatus('没有找到结果。', 'error');
+        return;
+      }
+
+      results?.replaceChildren(...data.results.map(makeRow));
+      setStatus(`找到 ${data.results.length} 首。`, 'success');
+    } catch {
+      showError('请求失败，检查一下网络。');
+      message('没有拿到结果。');
+      setStatus('搜索失败。', 'error');
+    }
+  }
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (input) void search(input.value);
+  });
+
+  root?.querySelectorAll<HTMLButtonElement>('[data-music-suggestion]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!input) return;
+      input.value = button.dataset.musicSuggestion ?? '';
+      void search(input.value);
+    });
+  });
+
+  const initialQuery = new URLSearchParams(location.search).get('q');
+  if (initialQuery && input) {
+    input.value = initialQuery;
+    void search(initialQuery);
+  }
+</script>

@@ -1,0 +1,29 @@
+---
+import { getCollection } from 'astro:content';
+
+import BookmarkBoard from '@/components/bookmarks/BookmarkBoard.astro';
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import type { BookmarkGroup } from '@/lib/bookmarks';
+
+const groups: BookmarkGroup[] = (await getCollection('bookmarks'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map((entry) => ({
+    id: entry.id,
+    title: entry.data.title,
+    order: entry.data.order,
+    items: entry.data.items,
+  }));
+
+const total = groups.reduce((count, group) => count + group.items.length, 0);
+---
+
+<PortalLayout title="收藏" description="常用网站、工具和资源，按分类整理。">
+  <div class="page">
+    <header class="page-head">
+      <h1>收藏</h1>
+      <p>{groups.length} 个分类，{total} 个链接。常用入口按分类整理，可以随时添加、编辑或隐藏；修改只保存在这台设备上。</p>
+    </header>
+
+    <BookmarkBoard groups={groups} />
+  </div>
+</PortalLayout>

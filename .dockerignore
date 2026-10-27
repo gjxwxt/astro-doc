@@ -1,0 +1,12 @@
+node_modules
+dist
+.astro
+.git
+.env
+.env.*
+!.env.example
+.taste-skill
+.content-sync-state.json
+content-sync.config.json
+*.log
+.DS_Store

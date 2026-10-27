@@ -1,0 +1,166 @@
+@import '@fontsource-variable/newsreader/wght.css';
+@import './tokens.css';
+
+:root,
+:root[data-theme='light'] {
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+
+  --sl-color-white: var(--ink);
+  --sl-color-black: var(--paper);
+  --sl-color-gray-1: var(--ink);
+  --sl-color-gray-2: var(--ink-2);
+  --sl-color-gray-3: var(--ink-2);
+  --sl-color-gray-4: var(--ink-3);
+  --sl-color-gray-5: var(--line);
+  --sl-color-gray-6: var(--paper-2);
+  --sl-color-gray-7: var(--paper);
+
+  --sl-color-accent-low: #dfeccf;
+  --sl-color-accent: #2f5b34;
+  --sl-color-accent-high: #1b3a20;
+
+  --sl-color-text: var(--ink-2);
+  --sl-color-text-accent: var(--link);
+  --sl-color-text-invert: var(--paper);
+  --sl-color-bg: var(--paper);
+  --sl-color-bg-nav: var(--paper);
+  --sl-color-bg-sidebar: var(--paper);
+  --sl-color-bg-inline-code: var(--paper-2);
+  --sl-color-bg-accent: var(--sl-color-accent);
+  --sl-color-hairline-light: var(--line);
+  --sl-color-hairline: var(--line);
+  --sl-color-hairline-shade: var(--line);
+  --sl-color-backdrop-overlay: rgba(6, 14, 8, 0.55);
+}
+
+:root[data-theme='dark'] {
+  --sl-color-white: var(--ink);
+  --sl-color-black: var(--paper);
+  --sl-color-gray-1: var(--ink);
+  --sl-color-gray-2: var(--ink-2);
+  --sl-color-gray-3: var(--ink-2);
+  --sl-color-gray-4: var(--ink-3);
+  --sl-color-gray-5: var(--line);
+  --sl-color-gray-6: var(--paper-2);
+  --sl-color-gray-7: var(--paper);
+
+  --sl-color-accent-low: #1e3514;
+  --sl-color-accent: #c7f19c;
+  --sl-color-accent-high: #d9f7b8;
+
+  --sl-color-text: var(--ink-2);
+  --sl-color-text-accent: var(--link);
+  --sl-color-text-invert: var(--forest-900);
+  --sl-color-bg: var(--paper);
+  --sl-color-bg-nav: var(--paper);
+  --sl-color-bg-sidebar: var(--paper);
+  --sl-color-bg-inline-code: var(--paper-2);
+  --sl-color-bg-accent: var(--sl-color-accent);
+  --sl-color-hairline-light: var(--line);
+  --sl-color-hairline: var(--line);
+  --sl-color-hairline-shade: var(--line);
+}
+
+body {
+  background: var(--paper);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.site-title,
+.hero h1 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  text-decoration-thickness: 2px;
+}
+
+.sl-markdown-content :not(pre) > code {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.site-title {
+  font-weight: 500;
+}
+
+header.header {
+  background: var(--paper);
+}
+
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+}
+
+.hero {
+  background: var(--paper);
+}
+
+.hero .copy {
+  color: var(--ink-2);
+}
+
+.hero h1 {
+  color: var(--ink);
+}
+
+.card,
+.link-card {
+  background: var(--paper-2);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.card:hover,
+.link-card:hover {
+  background: var(--paper-3);
+}
+
+.pagination-links a {
+  background: var(--paper-2);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.pagination-links a:hover {
+  background: var(--paper-3);
+}
+
+starlight-toc a[aria-current='true'] {
+  color: var(--ink);
+}
+
+.right-sidebar-panel {
+  border-inline-start-color: var(--line);
+}
+
+/* Keep the docs landing actions hierarchical: primary reading path first, back link quiet. */
+.hero .actions a[data-variant='minimal'] {
+  color: var(--ink-2);
+}
+
+.hero .actions a[data-variant='minimal']:hover {
+  color: var(--ink);
+}
+
+.sidebar-content a[href='/'] {
+  margin-bottom: 0.65rem;
+  color: var(--ink-2);
+  font-size: var(--sl-text-sm);
+  font-weight: 500;
+}

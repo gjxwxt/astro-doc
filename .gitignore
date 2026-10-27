@@ -1,21 +1,29 @@
 # build output
 dist/
-# generated types
 .astro/
+.taste-skill/
 
 # dependencies
 node_modules/
+packages/*/dist/
 
 # logs
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-
 
 # environment variables
 .env
-.env.production
+.env.*
+!.env.example
 
-# macOS-specific files
+# generated from the Obsidian vault
+src/content/library/**
+!src/content/library/.gitkeep
+
+# local content sync state and config
+.content-sync-state.json
+content-sync.config.json
+
+# macOS
 .DS_Store

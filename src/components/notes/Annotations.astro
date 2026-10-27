@@ -1,0 +1,417 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+
+interface Props {
+  path: string;
+}
+
+const { path } = Astro.props;
+---
+
+<section class="aside-block annotations" data-annotations data-page={path}>
+  <h2>标记与批注</h2>
+
+  <div class="rating-row">
+    <span class="rating-label">读后评分</span>
+    <div class="rating" data-rating aria-label="读后评分">
+      {
+        [1, 2, 3, 4, 5].map((value) => (
+          <button type="button" data-rating-value={value} aria-label={`${value} 星`}>
+            <Icon name="star" size={18} />
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="annotation-list" data-annotation-list></div>
+  <p class="annotation-empty" data-annotation-empty>
+    选中正文里的文字，可以划线或写批注。标注只保存在当前浏览器。
+  </p>
+
+  <div class="tool-actions">
+    <button class="button button--small button--ghost" type="button" data-annotation-export>
+      导出
+    </button>
+    <button class="button button--small button--ghost" type="button" data-annotation-clear>
+      清空
+    </button>
+  </div>
+</section>
+
+<div class="annotation-toolbar" data-annotation-toolbar hidden>
+  <button type="button" data-annotation-color="yellow" aria-label="黄色高亮">
+    <span class="dot dot--yellow"></span>
+  </button>
+  <button type="button" data-annotation-color="green" aria-label="绿色高亮">
+    <span class="dot dot--green"></span>
+  </button>
+  <button type="button" data-annotation-color="pink" aria-label="粉色高亮">
+    <span class="dot dot--pink"></span>
+  </button>
+  <button type="button" class="write" data-annotation-write>写批注</button>
+</div>
+
+<dialog class="annotation-dialog" data-annotation-dialog aria-label="写批注">
+  <h3>写批注</h3>
+  <p class="muted" data-annotation-quote></p>
+  <textarea placeholder="这段为什么重要？（可留空）" data-annotation-note></textarea>
+  <div class="annotation-dialog-actions">
+    <button class="button button--small button--ghost" type="button" data-annotation-cancel>取消</button>
+    <button class="button button--small" type="button" data-annotation-save>保存</button>
+  </div>
+</dialog>
+
+<script>
+  interface Annotation {
+    id: string;
+    quote: string;
+    prefix: string;
+    suffix: string;
+    color: 'yellow' | 'green' | 'pink';
+    note: string;
+    createdAt: string;
+  }
+
+  interface TextMap {
+    text: string;
+    nodes: Array<{ node: Text; start: number; end: number }>;
+  }
+
+  interface PendingSelection {
+    quote: string;
+    prefix: string;
+    suffix: string;
+  }
+
+  interface HighlightRegistry {
+    set(name: string, highlight: unknown): void;
+    delete(name: string): void;
+  }
+
+  const rootElement = document.querySelector<HTMLElement>('[data-annotations]');
+  const article = document.querySelector<HTMLElement>('[data-annotatable]');
+  const list = document.querySelector<HTMLElement>('[data-annotation-list]');
+  const empty = document.querySelector<HTMLElement>('[data-annotation-empty]');
+  const toolbar = document.querySelector<HTMLElement>('[data-annotation-toolbar]');
+  const dialog = document.querySelector<HTMLDialogElement>('[data-annotation-dialog]');
+  const noteInput = document.querySelector<HTMLTextAreaElement>('[data-annotation-note]');
+  const quotePreview = document.querySelector<HTMLElement>('[data-annotation-quote]');
+
+  if (rootElement && article && list && toolbar) {
+    const page = rootElement.dataset.page || location.pathname;
+    const storageKey = `portal-annotations:v1:${page}`;
+    const ratingKey = `portal-rating:v1:${page}`;
+    let annotations: Annotation[] = loadAnnotations();
+    let pending: PendingSelection | null = null;
+    let pendingColor: Annotation['color'] = 'yellow';
+
+    function loadAnnotations(): Annotation[] {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(storageKey) ?? '[]') as Annotation[];
+        return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item.quote === 'string') : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function persist() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(annotations));
+      } catch {
+        /* ignore quota errors */
+      }
+    }
+
+    function buildMap(): TextMap {
+      const walker = document.createTreeWalker(article!, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.nodeValue || node.nodeValue.trim() === '') return NodeFilter.FILTER_REJECT;
+          const parent = (node as Text).parentElement;
+          if (parent?.closest('script, style, .annotation-toolbar, .annotation-dialog')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+
+      const nodes: TextMap['nodes'] = [];
+      let text = '';
+      let current = walker.nextNode();
+      while (current) {
+        const value = current.nodeValue ?? '';
+        nodes.push({ node: current as Text, start: text.length, end: text.length + value.length });
+        text += value;
+        current = walker.nextNode();
+      }
+      return { text, nodes };
+    }
+
+    function rangeFromOffsets(map: TextMap, start: number, end: number): Range | null {
+      let startNode: Text | null = null;
+      let startOffset = 0;
+      let endNode: Text | null = null;
+      let endOffset = 0;
+
+      for (const entry of map.nodes) {
+        if (!startNode && start >= entry.start && start <= entry.end) {
+          startNode = entry.node;
+          startOffset = start - entry.start;
+        }
+        if (end >= entry.start && end <= entry.end) {
+          endNode = entry.node;
+          endOffset = end - entry.start;
+          break;
+        }
+      }
+
+      if (!startNode || !endNode) return null;
+      const range = document.createRange();
+      range.setStart(startNode, startOffset);
+      range.setEnd(endNode, endOffset);
+      return range;
+    }
+
+    function findRange(annotation: Annotation, map: TextMap): Range | null {
+      const quote = annotation.quote;
+      if (!quote) return null;
+
+      let best = -1;
+      let bestScore = -1;
+      let index = map.text.indexOf(quote);
+      while (index !== -1) {
+        const before = map.text.slice(Math.max(0, index - 40), index);
+        const after = map.text.slice(index + quote.length, index + quote.length + 40);
+        let score = 0;
+        if (annotation.prefix && before.endsWith(annotation.prefix)) score += 2;
+        if (annotation.suffix && after.startsWith(annotation.suffix)) score += 2;
+        if (score > bestScore) {
+          bestScore = score;
+          best = index;
+        }
+        index = map.text.indexOf(quote, index + 1);
+      }
+
+      if (best === -1) return null;
+      return rangeFromOffsets(map, best, best + quote.length);
+    }
+
+    function clearHighlights() {
+      const registry = (CSS as unknown as { highlights?: HighlightRegistry }).highlights;
+      if (!registry) return;
+      for (const color of ['yellow', 'green', 'pink']) registry.delete(`annotation-${color}`);
+    }
+
+    function renderHighlights() {
+      if (!('Highlight' in window)) return;
+      clearHighlights();
+      const registry = (CSS as unknown as { highlights?: HighlightRegistry }).highlights;
+      if (!registry) return;
+      const map = buildMap();
+      const groups: Record<string, Range[]> = { yellow: [], green: [], pink: [] };
+      for (const annotation of annotations) {
+        const range = findRange(annotation, map);
+        if (range) groups[annotation.color]?.push(range);
+      }
+      for (const [color, ranges] of Object.entries(groups)) {
+        if (ranges.length === 0) continue;
+        const HighlightCtor = (window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+        if (!HighlightCtor) continue;
+        registry.set(`annotation-${color}`, new HighlightCtor(...ranges));
+      }
+    }
+
+    function scrollToAnnotation(annotation: Annotation) {
+      const map = buildMap();
+      const range = findRange(annotation, map);
+      if (!range) return;
+      const rect = range.getBoundingClientRect();
+      window.scrollTo({ top: window.scrollY + rect.top - 120, behavior: 'smooth' });
+    }
+
+    function renderList() {
+      if (!list || !empty) return;
+      list.replaceChildren();
+      if (annotations.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      const sorted = [...annotations].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      for (const annotation of sorted) {
+        const item = document.createElement('article');
+        item.className = 'annotation-item';
+        const quote = document.createElement('blockquote');
+        quote.textContent = annotation.quote;
+        const note = document.createElement('p');
+        note.textContent = annotation.note || '（只标记，没有批注）';
+        const footer = document.createElement('footer');
+        const date = document.createElement('span');
+        date.textContent = new Date(annotation.createdAt).toLocaleDateString('zh-CN');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '删除';
+        remove.addEventListener('click', (event) => {
+          event.stopPropagation();
+          annotations = annotations.filter((item) => item.id !== annotation.id);
+          persist();
+          renderList();
+          renderHighlights();
+        });
+        footer.append(date, remove);
+        item.append(quote, note, footer);
+        item.addEventListener('click', () => scrollToAnnotation(annotation));
+        item.style.cursor = 'pointer';
+        list.append(item);
+      }
+    }
+
+    function hideToolbar() {
+      toolbar!.hidden = true;
+      pending = null;
+    }
+
+    function saveAnnotation(color: Annotation['color'], note: string) {
+      if (!pending) return;
+      annotations.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        quote: pending.quote,
+        prefix: pending.prefix,
+        suffix: pending.suffix,
+        color,
+        note,
+        createdAt: new Date().toISOString(),
+      });
+      persist();
+      renderList();
+      renderHighlights();
+      hideToolbar();
+      window.getSelection()?.removeAllRanges();
+    }
+
+    function handleSelection() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+        hideToolbar();
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (!article!.contains(range.commonAncestorContainer)) {
+        hideToolbar();
+        return;
+      }
+      const quote = range.toString().trim();
+      if (quote.length < 2 || quote.length > 600) {
+        hideToolbar();
+        return;
+      }
+
+      const map = buildMap();
+      const before = document.createRange();
+      before.selectNodeContents(article!);
+      try {
+        before.setEnd(range.startContainer, range.startOffset);
+      } catch {
+        hideToolbar();
+        return;
+      }
+      const start = before.toString().length;
+      const prefix = map.text.slice(Math.max(0, start - 40), start);
+      const suffix = map.text.slice(start + range.toString().length, start + range.toString().length + 40);
+
+      pending = { quote: range.toString(), prefix, suffix };
+      const rect = range.getBoundingClientRect();
+      toolbar!.hidden = false;
+      const width = toolbar!.offsetWidth || 150;
+      toolbar!.style.left = `${Math.min(window.innerWidth - width - 12, Math.max(12, rect.left + rect.width / 2 - width / 2))}px`;
+      toolbar!.style.top = `${Math.max(12, rect.top - 48)}px`;
+    }
+
+    function openNoteDialog() {
+      if (!pending || !dialog) return;
+      if (quotePreview) quotePreview.textContent = `「${pending.quote.slice(0, 120)}」`;
+      if (noteInput) noteInput.value = '';
+      dialog.showModal();
+      noteInput?.focus();
+      toolbar!.hidden = true;
+    }
+
+    toolbar.querySelectorAll<HTMLButtonElement>('[data-annotation-color]').forEach((button) => {
+      button.addEventListener('click', () => {
+        pendingColor = (button.dataset.annotationColor as Annotation['color']) ?? 'yellow';
+        saveAnnotation(pendingColor, '');
+      });
+    });
+
+    toolbar.querySelector('[data-annotation-write]')?.addEventListener('click', openNoteDialog);
+    document.querySelector('[data-annotation-cancel]')?.addEventListener('click', () => dialog?.close());
+    document.querySelector('[data-annotation-save]')?.addEventListener('click', () => {
+      saveAnnotation(pendingColor, noteInput?.value.trim() ?? '');
+      dialog?.close();
+    });
+
+    document.querySelector('[data-annotation-export]')?.addEventListener('click', () => {
+      if (annotations.length === 0) return;
+      const blob = new Blob([JSON.stringify({ page, annotations }, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `annotations-${page.replaceAll('/', '-').replace(/^-+|-+$/g, '') || 'page'}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.querySelector('[data-annotation-clear]')?.addEventListener('click', () => {
+      if (annotations.length === 0) return;
+      if (!window.confirm('清空这一页的所有标记和批注？')) return;
+      annotations = [];
+      persist();
+      renderList();
+      renderHighlights();
+    });
+
+    document.addEventListener('mouseup', () => window.setTimeout(handleSelection, 10));
+    document.addEventListener('keyup', (event) => {
+      if (event.key === 'Shift' || event.key.startsWith('Arrow')) window.setTimeout(handleSelection, 10);
+    });
+    document.addEventListener('mousedown', (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (toolbar.contains(target) || dialog?.contains(target)) return;
+      hideToolbar();
+    });
+
+    const ratingButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-rating-value]')];
+    let rating = 0;
+    try {
+      rating = Number(localStorage.getItem(ratingKey) ?? '0') || 0;
+    } catch {
+      rating = 0;
+    }
+    function paintRating() {
+      ratingButtons.forEach((button) => {
+        const value = Number(button.dataset.ratingValue);
+        button.classList.toggle('is-on', value <= rating);
+      });
+    }
+    ratingButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const value = Number(button.dataset.ratingValue);
+        rating = rating === value ? 0 : value;
+        try {
+          localStorage.setItem(ratingKey, String(rating));
+        } catch {
+          /* ignore */
+        }
+        paintRating();
+      });
+    });
+    paintRating();
+
+    renderList();
+    renderHighlights();
+    document.fonts?.ready.then(renderHighlights).catch(() => undefined);
+  }
+</script>

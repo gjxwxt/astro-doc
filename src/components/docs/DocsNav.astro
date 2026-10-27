@@ -1,0 +1,38 @@
+---
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+---
+
+<nav class="docs-portal-links" aria-label="站点导航">
+  <a href="/">门户</a>
+  <a href="/notes/">笔记</a>
+  <a href="/tools/">工具</a>
+  <a href="/bookmarks/">收藏</a>
+</nav>
+<Default {...Astro.props}><slot /></Default>
+
+<style>
+  .docs-portal-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .docs-portal-links a {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .docs-portal-links a:hover {
+    color: var(--sl-color-white);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 50rem) {
+    .docs-portal-links {
+      display: none;
+    }
+  }
+</style>

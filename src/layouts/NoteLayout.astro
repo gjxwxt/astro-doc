@@ -1,0 +1,104 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+import Annotations from '@/components/notes/Annotations.astro';
+import Comments from '@/components/notes/Comments.astro';
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { formatDate } from '@/lib/format';
+import { markdownToText } from '@/lib/markdown';
+import { readingTime } from '@/lib/format';
+
+interface Heading {
+  depth: number;
+  text: string;
+  slug: string;
+}
+
+interface Props {
+  note: CollectionEntry<'notes'>;
+  headings: Heading[];
+  older?: CollectionEntry<'notes'>;
+  newer?: CollectionEntry<'notes'>;
+}
+
+const { note, headings, older, newer } = Astro.props;
+const minutes = readingTime(markdownToText(note.body ?? ''));
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+---
+
+<PortalLayout title={note.data.title} description={note.data.description}>
+  <div class="note-shell">
+    <article class="note-article">
+      <header class="note-header" data-reveal>
+        <h1>{note.data.title}</h1>
+        <div class="note-meta">
+          <time datetime={note.data.date.toISOString()}>{formatDate(note.data.date)}</time>
+          <span>{minutes} 分钟阅读</span>
+          {note.data.source && <span>同步笔记</span>}
+        </div>
+        {note.data.description && <p class="note-lede">{note.data.description}</p>}
+        {
+          note.data.tags.length > 0 && (
+            <div class="note-tags">
+              {note.data.tags.map((tag) => (
+                <span class="tag">{tag}</span>
+              ))}
+            </div>
+          )
+        }
+      </header>
+
+      <div class="prose" data-annotatable>
+        <slot />
+      </div>
+
+      <nav class="note-foot" aria-label="笔记导航">
+        <span>
+          {
+            older ? (
+              <>
+                <span>更早</span>
+                <a href={`/notes/${older.id}/`}>{older.data.title}</a>
+              </>
+            ) : (
+              <span>这是最早的一篇</span>
+            )
+          }
+        </span>
+        <span style="text-align: right">
+          {
+            newer ? (
+              <>
+                <span>更新</span>
+                <a href={`/notes/${newer.id}/`}>{newer.data.title}</a>
+              </>
+            ) : (
+              <span>这是最新的一篇</span>
+            )
+          }
+        </span>
+      </nav>
+
+      <Comments />
+    </article>
+
+    <aside class="note-aside" aria-label="本页导航和标记" data-reveal>
+      {
+        toc.length > 0 && (
+          <div class="aside-block">
+            <h2>本页目录</h2>
+            <nav class="toc">
+              {toc.map((heading) => (
+                <a href={`#${heading.slug}`} class:list={{ 'toc-depth-3': heading.depth === 3 }}>
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+          </div>
+        )
+      }
+
+      <Annotations path={Astro.url.pathname} />
+    </aside>
+  </div>
+</PortalLayout>

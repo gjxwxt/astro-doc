@@ -1,0 +1,88 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { plugins } from '@/plugins/registry';
+
+const statusLabel: Record<string, string> = {
+  stable: '可用',
+  beta: '测试中',
+  experimental: '实验',
+  'needs-config': '需配置',
+};
+
+const featured = plugins[0];
+const rest = plugins.slice(1);
+---
+
+<PortalLayout title="工具" description="可以直接使用的站内工具：搜歌、开发工具、视频链接解析。">
+  <div class="page">
+    <header class="page-head">
+      <h1>工具</h1>
+      <p>
+        能直接用的东西。每个工具是一个插件，有自己的 manifest、服务端 action 和界面；同一份定义也会暴露给 MCP。
+      </p>
+    </header>
+
+    <div class="tool-catalog" data-reveal-group>
+      {
+        featured && (
+          <a
+            class="tool-card tool-card--featured"
+            href={`/tools/${featured.id}/`}
+            data-reveal
+          >
+            <span class="tool-card-icon">
+              <Icon name={featured.icon} size={24} />
+            </span>
+            <span>
+              <h2>{featured.name}</h2>
+              <p>{featured.description}</p>
+              <span class="tool-card-meta">
+                <span class={`status status--${featured.status}`}>{statusLabel[featured.status]}</span>
+                {featured.tags.map((tag) => (
+                  <span class="tag">{tag}</span>
+                ))}
+                <span>{featured.actions.length} 个功能</span>
+              </span>
+            </span>
+            <Icon name="arrow-up-right" size={20} />
+          </a>
+        )
+      }
+
+      {
+        rest.map((plugin) => (
+          <a class="tool-card" href={`/tools/${plugin.id}/`} data-reveal>
+            <span class="tool-card-icon">
+              <Icon name={plugin.icon} size={22} />
+            </span>
+            <span>
+              <h2>{plugin.name}</h2>
+              <p>{plugin.description}</p>
+              <span class="tool-card-meta">
+                <span class={`status status--${plugin.status}`}>{statusLabel[plugin.status]}</span>
+                {plugin.tags.map((tag) => (
+                  <span class="tag">{tag}</span>
+                ))}
+                <span>{plugin.actions.length} 个功能</span>
+                {plugin.config && <span>需要配置</span>}
+              </span>
+            </span>
+            <Icon name="arrow-up-right" size={20} />
+          </a>
+        ))
+      }
+    </div>
+
+    <section class="home-section" aria-labelledby="plugin-title">
+      <div class="section-head">
+        <h2 id="plugin-title">怎么加一个工具</h2>
+        <p>新增目录、写 manifest、按需实现 server action 和界面，注册表会自动发现。</p>
+      </div>
+      <div class="letter">
+        <p>工具不需要改路由、不需要改 MCP 服务端，也不需要维护第二份 schema。输入校验、MCP 的 tool schema 和页面上的 API 说明都来自同一个 manifest。</p>
+        <p>需要联网、需要密钥或者要绕开 CORS 的动作放服务端；纯计算留在浏览器里。服务端统一做校验、限流和错误映射。</p>
+      </div>
+    </section>
+  </div>
+</PortalLayout>

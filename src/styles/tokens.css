@@ -1,0 +1,66 @@
+:root {
+  color-scheme: light;
+
+  --forest-950: #08120b;
+  --forest-900: #0e1d12;
+  --forest-800: #14281a;
+  --forest-700: #1d3523;
+  --forest-600: #2b4a33;
+
+  --paper: #f2f3ea;
+  --paper-2: #e6e8db;
+  --paper-3: #d8dcc9;
+
+  --ink: #132016;
+  --ink-2: #39483d;
+  --ink-3: #5d6a60;
+
+  --lime: #c7f19c;
+  --lime-2: #a8de72;
+  --lime-ink: #17260f;
+
+  --amber: #e3b45f;
+  --red: #d66a57;
+
+  --link: #2d5a35;
+  --line: #d3d7c5;
+  --focus: #7da83f;
+
+  --radius: 18px;
+  --radius-sm: 10px;
+
+  --shadow-panel: 0 24px 70px rgba(8, 20, 12, 0.18);
+
+  --font-display: 'Newsreader Variable', 'Songti SC', 'Source Han Serif SC', 'Noto Serif CJK SC',
+    serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  --font-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  --step-1: 0.8125rem;
+  --step-2: 0.9375rem;
+  --step-3: 1.0625rem;
+  --step-4: clamp(1.15rem, 1.05rem + 0.4vw, 1.4rem);
+  --step-5: clamp(1.55rem, 1.25rem + 1.2vw, 2.15rem);
+  --step-6: clamp(2.1rem, 1.55rem + 2.5vw, 3.5rem);
+  --step-7: clamp(3.2rem, 2.1rem + 5.2vw, 6.6rem);
+
+  --gutter: clamp(20px, 3.4vw, 56px);
+  --content: 930px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #101a12;
+  --paper-2: #16231a;
+  --paper-3: #1e3025;
+  --ink: #e8ebdf;
+  --ink-2: #c2c9bc;
+  --ink-3: #9aa69a;
+  --line: #26382b;
+  --forest-900: #0a120c;
+  --forest-800: #0f1d13;
+  --link: #c7f19c;
+  --focus: #c7f19c;
+  --shadow-panel: 0 24px 70px rgba(0, 0, 0, 0.5);
+}

@@ -1,0 +1,184 @@
+---
+import '@/styles/tools.css';
+---
+
+<div class="tool-ui" data-media>
+  <form class="tool-form" data-media-form>
+    <input
+      type="url"
+      name="url"
+      placeholder="粘贴抖音、B 站、YouTube 等链接"
+      autocomplete="off"
+      aria-label="视频链接"
+      data-media-input
+    />
+    <button class="button" type="submit" data-media-probe-button>读取预览</button>
+  </form>
+
+  <p class="tool-note">
+    默认只读取页面的 Open Graph 信息（标题、封面、描述）。视频直链需要你自己配置解析服务；没有配置时会明确提示，不会假装能解析。
+  </p>
+
+  <div class="tool-error" data-media-error hidden></div>
+
+  <article class="media-preview" data-media-preview hidden>
+    <img class="media-cover" alt="" data-media-cover />
+    <div class="media-copy">
+      <h3 data-media-title></h3>
+      <p data-media-description></p>
+      <small data-media-url></small>
+    </div>
+  </article>
+
+  <div class="media-video" data-media-video hidden>
+    <video controls preload="metadata" data-media-video-element></video>
+    <div class="tool-actions">
+      <a class="button button--small" data-media-open target="_blank" rel="noopener noreferrer">
+        打开视频
+      </a>
+      <button class="button button--small button--ghost" type="button" data-media-copy>
+        复制直链
+      </button>
+      <button class="button button--small" type="button" data-media-resolve>解析视频地址</button>
+    </div>
+  </div>
+
+  <div class="tool-actions" data-media-actions>
+    <button class="button button--small button--ghost" type="button" data-media-resolve>
+      解析视频地址
+    </button>
+  </div>
+
+  <p class="tool-note">
+    只下载你有权保存的内容，并遵守目标站点的条款。解析服务返回的内容由服务提供方负责。
+  </p>
+</div>
+
+<script>
+  interface ApiResponse<T> {
+    ok: boolean;
+    data?: T;
+    error?: { code: string; message: string; extra?: { hint?: string } };
+  }
+
+  interface Preview {
+    url: string;
+    finalUrl: string;
+    title: string;
+    description: string;
+    image: string;
+    video: string;
+    siteName: string;
+  }
+
+  interface Resolved {
+    source: string;
+    title: string;
+    author: string;
+    cover: string;
+    videoUrl: string;
+    images: string[];
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-media]');
+  const form = root?.querySelector<HTMLFormElement>('[data-media-form]');
+  const input = root?.querySelector<HTMLInputElement>('[data-media-input]');
+  const errorBox = root?.querySelector<HTMLElement>('[data-media-error]');
+  const preview = root?.querySelector<HTMLElement>('[data-media-preview]');
+  const cover = root?.querySelector<HTMLImageElement>('[data-media-cover]');
+  const title = root?.querySelector<HTMLElement>('[data-media-title]');
+  const description = root?.querySelector<HTMLElement>('[data-media-description]');
+  const urlLabel = root?.querySelector<HTMLElement>('[data-media-url]');
+  const videoBox = root?.querySelector<HTMLElement>('[data-media-video]');
+  const video = root?.querySelector<HTMLVideoElement>('[data-media-video-element]');
+  const open = root?.querySelector<HTMLAnchorElement>('[data-media-open]');
+  const copyButton = root?.querySelector<HTMLButtonElement>('[data-media-copy]');
+  const resolveButtons = root?.querySelectorAll<HTMLButtonElement>('[data-media-resolve]');
+  let lastVideoUrl = '';
+
+  function setError(message: string, hint?: string) {
+    if (!errorBox) return;
+    errorBox.hidden = !message;
+    errorBox.textContent = hint ? `${message} ${hint}` : message;
+  }
+
+  function showPreview(data: Preview) {
+    if (!preview) return;
+    preview.hidden = false;
+    if (cover) {
+      if (data.image) {
+        cover.src = data.image;
+        cover.hidden = false;
+      } else {
+        cover.hidden = true;
+      }
+    }
+    if (title) title.textContent = data.title || '没有标题';
+    if (description) description.textContent = data.description || '这个页面没有提供描述。';
+    if (urlLabel) urlLabel.textContent = data.siteName ? `${data.siteName} · ${data.finalUrl}` : data.finalUrl;
+  }
+
+  function showVideo(data: Resolved) {
+    if (!videoBox || !video) return;
+    lastVideoUrl = data.videoUrl;
+    videoBox.hidden = false;
+    video.src = data.videoUrl;
+    if (open) open.href = data.videoUrl;
+    if (title && data.title) title.textContent = data.title;
+    if (description && data.author) description.textContent = `作者：${data.author}`;
+    if (cover && data.cover) {
+      cover.src = data.cover;
+      cover.hidden = false;
+    }
+  }
+
+  async function call<T>(action: 'probe' | 'resolve'): Promise<T | null> {
+    const url = input?.value.trim();
+    if (!url) {
+      setError('先粘贴一个链接。');
+      return null;
+    }
+    setError('');
+    try {
+      const response = await fetch(`/api/tools/media/${action}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const payload = (await response.json()) as ApiResponse<T>;
+      if (!response.ok || !payload.ok || payload.data === undefined) {
+        setError(payload.error?.message ?? '请求失败。', payload.error?.extra?.hint);
+        return null;
+      }
+      return payload.data;
+    } catch {
+      setError('请求失败，检查一下网络。');
+      return null;
+    }
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (videoBox) videoBox.hidden = true;
+    const data = await call<Preview>('probe');
+    if (data) showPreview(data);
+  });
+
+  resolveButtons?.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const data = await call<Resolved>('resolve');
+      if (data) showVideo(data);
+    });
+  });
+
+  copyButton?.addEventListener('click', async () => {
+    if (!lastVideoUrl) return;
+    try {
+      await navigator.clipboard.writeText(lastVideoUrl);
+      copyButton.textContent = '已复制';
+      window.setTimeout(() => (copyButton.textContent = '复制直链'), 1200);
+    } catch {
+      setError('复制失败，手动选中视频地址吧。');
+    }
+  });
+</script>

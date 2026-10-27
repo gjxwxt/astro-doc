@@ -1,0 +1,43 @@
+---
+import { siteConfig } from '@/config/site';
+
+const { giscus } = siteConfig;
+const configured = Boolean(giscus.repo && giscus.repoId && giscus.categoryId);
+const isDev = import.meta.env.DEV;
+---
+
+{
+  configured ? (
+    <section class="comments" aria-labelledby="comments-title">
+      <h2 id="comments-title">评论</h2>
+      <div class="giscus" />
+      <script
+        is:inline
+        src="https://giscus.app/client.js"
+        data-repo={giscus.repo}
+        data-repo-id={giscus.repoId}
+        data-category={giscus.category}
+        data-category-id={giscus.categoryId}
+        data-mapping={giscus.mapping}
+        data-strict={giscus.strict ? '1' : '0'}
+        data-reactions-enabled={giscus.reactionsEnabled ? '1' : '0'}
+        data-emit-metadata="0"
+        data-input-position={giscus.inputPosition}
+        data-theme="preferred_color_scheme"
+        data-lang={giscus.lang}
+        data-loading="lazy"
+        async
+        crossorigin="anonymous"
+      />
+    </section>
+  ) : isDev ? (
+    <section class="comments" aria-labelledby="comments-title">
+      <h2 id="comments-title">评论</h2>
+      <p class="note">
+        还没有配置 Giscus。想开放公开评论时，在 <code>src/config/site.ts</code> 里填入仓库信息，参考
+        <a href="https://giscus.app/zh-CN" target="_blank" rel="noopener noreferrer"> giscus.app </a>
+        的配置向导。私人划线不受影响，已经可用。
+      </p>
+    </section>
+  ) : null
+}

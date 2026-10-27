@@ -1,0 +1,325 @@
+ai:
+  title: AI 工具
+  order: 1
+  items:
+    - name: ChatGPT
+      url: https://chat.openai.com/chat
+      description: 通用 AI 对话
+      featured: true
+    - name: Forefront
+      url: https://chat.forefront.ai/
+      description: 多模型对话
+    - name: 糖果梦 AI
+      url: https://bot.tgmeng.com/home
+      description: 聚合 AI 助手
+    - name: Chat18
+      url: https://chat18.aichatos.xyz/
+    - name: Poe
+      url: https://poe.com/
+      description: 聚合多家模型
+    - name: Kimi
+      url: https://kimi.moonshot.cn/
+      featured: true
+      description: 长文本阅读与对话
+daily:
+  title: 日常
+  order: 2
+  items:
+    - name: 哔哩哔哩
+      url: https://www.bilibili.com/
+      featured: true
+      description: 视频与学习
+    - name: 百度云
+      url: https://pan.baidu.com/
+      description: 网盘
+    - name: 知乎
+      url: https://www.zhihu.com/
+      featured: true
+      description: 问答与长文
+    - name: 子夜动漫
+      url: https://www.ziyedm.com/
+      description: 在线动漫
+    - name: 影视森林
+      url: https://www.549.tv/
+      description: 影视导航
+    - name: job
+      url: https://jobincorner.com/
+      description: 招聘信息
+    - name: 全国计算机技术与软件专业技术资格
+      url: https://bm.ruankao.org.cn/sign/welcome
+      description: 软考报名
+community:
+  title: 论坛与社区
+  order: 3
+  items:
+    - name: 吾爱破解
+      url: https://www.52pojie.cn/forum.php?mod=guide&view=newthread
+      featured: true
+      description: 逆向与工具社区
+    - name: 掘金
+      url: https://juejin.cn/
+      featured: true
+      description: 中文技术社区
+    - name: V2EX
+      url: https://v2ex.com/
+      featured: true
+      description: 创意与技术的社区
+    - name: AFF 分享
+      url: https://www.ahhhhfs.com/funny_site/github%e9%a1%b9%e7%9b%ae/
+      description: GitHub 项目与资源分享
+    - name: 不死鸟导航
+      url: https://iui.su/
+      description: 资源导航
+    - name: Chrome Blog
+      url: https://developer.chrome.com/blog/
+      description: Chrome 与 Web 平台动态
+    - name: 虫部落快搜
+      url: https://search.chongbuluo.com/
+      description: 聚合搜索入口
+frontend:
+  title: 前端与框架
+  order: 4
+  items:
+    - name: Astro
+      url: https://astro.build/
+      description: 内容驱动的 Web 框架
+      featured: true
+    - name: GitHub
+      url: https://github.com/
+      description: 代码托管与开源项目
+      featured: true
+    - name: Quasar
+      url: https://www.quasar-cn.cn/
+      description: Vue 全平台框架
+    - name: shadcn/ui
+      url: https://ui.shadcn.com/
+      featured: true
+      description: 可复制粘贴的 React 组件
+    - name: daisyUI
+      url: https://daisyui.com
+      description: Tailwind 组件库
+    - name: Vue UI 库对比
+      url: https://ui-libs.vercel.app/
+      description: Vue 组件库横向对比
+    - name: shadcn-vue
+      url: https://www.shadcn-vue.com/
+      description: shadcn 的 Vue 版本
+    - name: Naive UI
+      url: https://www.naiveui.com/zh-CN/light/docs/installation
+      description: Vue 3 组件库
+    - name: PrimeVue
+      url: https://primevue.org/vite
+      description: Vue 组件库
+    - name: ByteMD 编辑器
+      url: https://bytemd.js.org/
+      description: Markdown 编辑器组件
+    - name: vxe-table
+      url: https://vxetable.cn/v3/#/table/start/install
+      description: Vue 表格组件
+    - name: Indie Hacker Tools
+      url: https://github.com/weijunext/indie-hacker-tools
+      description: 独立开发者技术栈
+    - name: leaferjs
+      url: https://www.leaferjs.com/ui/
+      description: Canvas 图形引擎
+    - name: 前端森林导航
+      url: https://fesites.netlify.app/
+      description: 前端资源聚合
+    - name: UmiJS
+      url: https://umijs.org/docs/tutorials/getting-started
+      description: React 应用框架
+    - name: Radix UI
+      url: https://www.radix-ui.com/themes/docs/overview/getting-started
+      description: 无样式 React 组件
+    - name: Atlassian Design
+      url: https://atlassian.design/components/app-provider/examples
+      description: Atlassian 设计系统
+    - name: Semi Design
+      url: https://semi.design/zh-CN
+      description: 字节跳动设计系统
+    - name: NextUI
+      url: https://nextui.org/docs/guide/introduction
+      description: React UI 库
+    - name: React 资源大全
+      url: https://github.com/enaqx/awesome-react
+      description: React 资源索引
+    - name: Radix Vue
+      url: https://www.radix-vue.com/
+      description: Vue 无样式组件
+    - name: VueUse
+      url: https://vueuse.org/
+      description: Vue 组合式工具集
+    - name: WXT
+      url: https://wxt.dev
+      description: 浏览器扩展开发框架
+    - name: Extension.js
+      url: https://extension.js.org/
+      description: 零配置浏览器扩展框架
+    - name: Design Resources
+      url: https://github.com/bradtraversy/design-resources-for-developers
+      description: 前端设计资源合集
+    - name: Vue.js 挑战
+      url: https://cn-vuejs-challenges.netlify.app/getting-started.html
+      description: Vue 练习题
+design:
+  title: 样式与灵感
+  order: 5
+  items:
+    - name: awwwards
+      url: https://www.awwwards.com/websites/sites_of_the_day/
+      description: 网页设计灵感
+    - name: gsap
+      url: https://gsap.com/
+      description: Web 动画库
+    - name: lottie
+      url: https://airbnb.io/lottie/#/
+      description: 动效播放与制作
+    - name: matter-js
+      url: https://brm.io/matter-js/docs/
+      description: 2d物理引擎
+    - name: seeseed
+      url: https://www.seeseed.com/
+      description: 设计资源导航
+    - name: CocoMaterial
+      url: https://cocomaterial.com/
+      description: 手绘风图标
+    - name: CSS Inspiration
+      url: https://chokcoco.github.io/CSS-Inspiration/#/
+      description: CSS 创意效果
+    - name: CSS Box Shadow
+      url: https://getcssscan.com/css-box-shadow-examples?ref=producthunt
+      description: 阴影效果参考
+    - name: 前端布局文章
+      url: https://mp.weixin.qq.com/s/TX9ukiCZgo_ji_4LnsAWCA
+      description: 常见前端布局讲解
+    - name: CSS Loaders
+      url: https://css-loaders.com/infinity/
+      description: CSS 加载动画
+    - name: NavNav
+      url: https://navnav.co/
+      description: 导航与交互灵感
+    - name: Excalidraw
+      url: https://excalidraw.com/
+      featured: true
+      description: 手绘风白板
+    - name: CSS 参考
+      url: https://htmlcheatsheet.com/css/
+      description: 常用 CSS 速查
+learn:
+  title: 学习与手册
+  order: 6
+  items:
+    - name: 开发者客栈
+      url: https://www.developers.pub/wiki
+      description: 前后端面试题
+    - name: Web 全栈体系
+      url: https://hejialianghe.gitee.io/guide/#_1-%E5%89%8D%E8%A8%80-preface
+      description: Web 全栈学习路线
+    - name: 柏码后端知识库
+      url: https://itbaima.net/
+      description: 后端知识库
+    - name: Component Party
+      url: https://component-party.jason-liang.com/
+      description: 多框架语法对比
+    - name: You Need to Know CSS
+      url: https://lhammer.cn/You-need-to-know-css/#/zh-cn/translucent-borders
+      description: CSS 必知细节
+    - name: Defensive CSS
+      url: https://defensivecss.dev/tips/
+      description: 防御式 CSS 技巧
+    - name: 现代 JavaScript 教程
+      url: https://zh.javascript.info/
+      description: JavaScript 教程
+    - name: VisuAlgo
+      url: https://visualgo.net/zh
+      description: 算法可视化
+    - name: React技术揭秘
+      url: https://react.iamkasong.com/
+    - name: 百度前端技术学园
+      url: https://ife.baidu.com/encyclopedia/readme1.html
+      description: 前端基础课程
+    - name: ApacheCN 导航
+      url: https://docs.apachecn.org/
+      description: 开源文档与教程
+    - name: Full Stack Open
+      url: https://fullstackopen.com/zh/
+      description: 全栈公开课
+    - name: JS 常见算法（知乎）
+      url: https://zhuanlan.zhihu.com/p/27659059
+      description: 算法题整理
+    - name: JS 常见算法（简书）
+      url: https://www.jianshu.com/p/2f38ac50c63a
+      description: 算法题整理
+    - name: MDN Web Docs
+      url: https://developer.mozilla.org/zh-CN/
+      featured: true
+      description: Web 平台权威文档
+    - name: Can I use
+      url: https://caniuse.com/
+      featured: true
+      description: 浏览器兼容性查询
+    - name: Any Rule
+      url: https://any86.github.io/any-rule/
+      description: 常用正则速查
+    - name: 现代 Web 开发指南
+      url: https://web.dev/learn/
+      description: web.dev 的系统课程
+data:
+  title: 数据可视化
+  order: 7
+  items:
+    - name: MakeAPie
+      url: https://www.makeapie.cn/echarts
+      featured: true
+      description: ECharts 示例社区
+    - name: PPChart
+      url: https://www.ppchart.com/#/
+      description: ECharts 图表集
+    - name: ECharts 作品集
+      url: https://chart.majh.top/
+      description: ECharts 作品展示
+    - name: Chartlib
+      url: https://chartlib.datains.cn/echarts
+      description: 图表库示例
+    - name: DataV
+      url: https://datav.jiaminghi.com/guide/#%E5%88%9B%E5%BB%BAvue%E9%A1%B9%E7%9B%AE
+      description: 大屏可视化组件
+mobile:
+  title: 移动端与小程序
+  order: 8
+  items:
+    - name: mp-html
+      url: https://jin-yufeng.gitee.io/mp-html/#/
+      description: 小程序富文本组件
+    - name: 前端铺子移动端
+      url: https://qdpz.zhoukaiwen.com/
+      description: 移动端模板
+    - name: Taro
+      url: https://taro-docs.jd.com/docs/GETTING-STARTED
+      description: 跨端小程序框架
+services:
+  title: 小工具与服务
+  order: 9
+  items:
+    - name: imgbb 图床
+      url: https://imgbb.com/
+      description: 图片外链图床
+    - name: Torrent 查询
+      url: https://iknowwhatyoudownload.com/
+      description: 查看 IP 的公开下载记录
+    - name: SSL 监控
+      url: https://httpsok.com/console/dashboard
+      description: 证书到期监控
+    - name: Squoosh
+      url: https://squoosh.app/
+      featured: true
+      description: 图片压缩
+    - name: 哪煮米
+      url: https://www.nazhumi.com/
+      description: 域名比价
+    - name: Namebeta
+      url: https://namebeta.com/
+      description: 域名比价
+    - name: Iconify 图标库
+      url: https://icones.js.org/
+      description: 开源图标搜索

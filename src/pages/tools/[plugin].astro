@@ -1,0 +1,245 @@
+---
+import Icon from '@/components/ui/Icon.astro';
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { loadToolUi, plugins } from '@/plugins/registry';
+import { toJsonSchema } from '@/plugins/validate';
+import '@/styles/tools.css';
+
+export async function getStaticPaths() {
+  return plugins.map((plugin) => ({ params: { plugin: plugin.id }, props: { plugin } }));
+}
+
+const { plugin } = Astro.props;
+const ui = await loadToolUi(plugin.id);
+const Tool = ui?.default as ((props: Record<string, unknown>) => unknown) | undefined;
+const serverActions = plugin.actions.filter((action) => action.kind === 'server');
+const mcpActions = serverActions.filter((action) => action.mcp);
+
+const statusLabel: Record<string, string> = {
+  stable: '可用',
+  beta: '测试中',
+  experimental: '实验',
+  'needs-config': '需配置',
+};
+
+const mcpConfig = JSON.stringify(
+  {
+    mcpServers: {
+      'josh-portal': {
+        command: 'node',
+        args: ['/path/to/mcp-server/dist/index.js'],
+        env: {
+          PORTAL_URL: 'http://localhost:4321',
+          PORTAL_API_TOKEN: '',
+        },
+      },
+    },
+  },
+  null,
+  2,
+);
+---
+
+<PortalLayout title={plugin.name} description={plugin.description}>
+  <div class="tool-shell">
+    <nav class="tool-nav" aria-label="工具列表">
+      {
+        plugins.map((item) => (
+          <a href={`/tools/${item.id}/`} aria-current={item.id === plugin.id ? 'page' : undefined}>
+            <Icon name={item.icon} size={16} />
+            {item.name}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="tool-main">
+      <header class="tool-head">
+        <span class="tool-glyph">
+          <Icon name={plugin.icon} size={22} />
+        </span>
+        <div class="tool-head-copy">
+          <h1>{plugin.name}</h1>
+          <p>{plugin.description}</p>
+          <div class="tool-card-meta">
+            <span class={`status status--${plugin.status}`}>{statusLabel[plugin.status]}</span>
+            {plugin.tags.map((tag) => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {
+        plugin.config && (
+          <p class="note tool-config">
+            <strong>需要配置：</strong>
+            {plugin.config.hint}
+          </p>
+        )
+      }
+
+      <div class="tool-workbench" data-ui>
+        <div class="tool-workbench-head">
+          <h2>工作台</h2>
+          <span class="status">{plugin.actions.length} 个功能</span>
+        </div>
+        {
+          Tool ? (
+            <Tool />
+          ) : (
+            <p class="note">这个插件还没有界面。可以直接调用下面的 API。</p>
+          )
+        }
+      </div>
+
+      <section class="integration" aria-labelledby="integration-title">
+        <div class="integration-head">
+          <div>
+            <h2 id="integration-title">接口与集成</h2>
+            <p>给脚本用 HTTP，给 AI 客户端用 MCP。地址和配置都可以直接复制。</p>
+          </div>
+        </div>
+
+        {
+          serverActions.length === 0 ? (
+            <div class="integration-card">
+              <p class="note">这个工具完全在浏览器里运行，没有服务端接口。</p>
+            </div>
+          ) : (
+            <div class="integration-grid">
+              <article class="integration-card">
+                <div class="integration-card-head">
+                  <span class="integration-badge">HTTP API</span>
+                  <h3>在脚本或服务里调用</h3>
+                </div>
+                <div class="integration-actions">
+                  {serverActions.map((action) => (
+                    <div class="integration-action">
+                      <div class="integration-action-copy">
+                        <strong>{action.label}</strong>
+                        <p>{action.description}</p>
+                      </div>
+                      <div class="integration-endpoint">
+                        <span class="method-pill">POST</span>
+                        <code>{`/api/tools/${plugin.id}/${action.id}`}</code>
+                        <button
+                          class="copy-button"
+                          type="button"
+                          data-copy={`POST /api/tools/${plugin.id}/${action.id}`}
+                          aria-label={`复制 ${action.label} 接口地址`}
+                        >
+                          <Icon name="copy" size={13} />
+                          <span data-copy-label>复制</span>
+                        </button>
+                      </div>
+                      {action.input && (
+                        <details class="schema-details">
+                          <summary>查看参数</summary>
+                          <pre id={`schema-${action.id}`} tabindex="0">
+                            <code>{JSON.stringify(toJsonSchema(action.input), null, 2)}</code>
+                          </pre>
+                          <button
+                            class="copy-button copy-button--text"
+                            type="button"
+                            data-copy-target={`#schema-${action.id}`}
+                            aria-label={`复制 ${action.label} 参数`}
+                          >
+                            <Icon name="copy" size={13} />
+                            <span data-copy-label>复制参数</span>
+                          </button>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article class="integration-card integration-card--mcp">
+                <div class="integration-card-head">
+                  <span class="integration-badge">MCP</span>
+                  <h3>在 AI 客户端里调用</h3>
+                </div>
+                <p class="integration-copy">
+                  配一次，编辑器或 AI 客户端就能直接搜索和调用这个工具。
+                </p>
+                {mcpActions.length > 0 ? (
+                  <>
+                    <div class="mcp-tools" aria-label="可用的 MCP 工具">
+                      {mcpActions.map((action) => (
+                        <code class="mcp-tool">{`${plugin.id}_${action.id}`}</code>
+                      ))}
+                    </div>
+                    <div class="integration-code-head">
+                      <span>MCP 配置</span>
+                      <button
+                        class="copy-button copy-button--text"
+                        type="button"
+                        data-copy-target="#mcp-config"
+                        aria-label="复制 MCP 配置"
+                      >
+                        <Icon name="copy" size={13} />
+                        <span data-copy-label>复制配置</span>
+                      </button>
+                    </div>
+                    <pre class="integration-code" id="mcp-config" tabindex="0">
+                      <code>{mcpConfig}</code>
+                    </pre>
+                    <p class="mcp-note">
+                      把 <code>args</code> 里的路径换成你本机的 <code>packages/mcp-server/dist/index.js</code>，<code>PORTAL_URL</code> 换成实际地址。
+                    </p>
+                  </>
+                ) : (
+                  <p class="note">这个工具没有 MCP tool，只能通过 HTTP 调用。</p>
+                )}
+              </article>
+            </div>
+          )
+        }
+      </section>
+
+      {
+        plugin.notes && plugin.notes.length > 0 && (
+          <section class="home-section" aria-labelledby="notes-title">
+            <div class="section-head">
+              <h2 id="notes-title">说明</h2>
+            </div>
+            <div class="letter">
+              {plugin.notes.map((note) => (
+                <p>{note}</p>
+              ))}
+            </div>
+          </section>
+        )
+      }
+    </div>
+  </div>
+</PortalLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copy], [data-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const target = button.dataset.copyTarget;
+      const text = target
+        ? document.querySelector<HTMLElement>(target)?.textContent?.trim() ?? ''
+        : button.dataset.copy ?? '';
+      if (!text) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        const label = button.querySelector<HTMLElement>('[data-copy-label]');
+        if (label) {
+          const previous = label.textContent;
+          label.textContent = '已复制';
+          window.setTimeout(() => {
+            label.textContent = previous;
+          }, 1600);
+        }
+        button.classList.add('is-copied');
+        window.setTimeout(() => button.classList.remove('is-copied'), 1600);
+      } catch {
+        button.title = '复制失败，请手动选择文本';
+      }
+    });
+  });
+</script>
