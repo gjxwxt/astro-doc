@@ -284,6 +284,41 @@ if (!getSession(Astro.request, process.env)) {
       </footer>
     </div>
   </dialog>
+
+  <dialog class="reader-dialog" data-reader-dialog aria-label="查看碎片全文">
+    <div class="reader-shell">
+      <header class="reader-head">
+        <div>
+          <p class="private-eyebrow" data-reader-kicker>Fragment</p>
+          <h2 data-reader-title>碎片原文</h2>
+        </div>
+        <button class="reader-close" type="button" data-reader-close aria-label="关闭全文">
+          关闭
+        </button>
+      </header>
+      <div class="reader-body" data-reader-body></div>
+      <footer class="reader-foot">
+        <p data-reader-meta></p>
+        <div class="reader-actions">
+          <button
+            class="private-button private-button--small"
+            type="button"
+            data-reader-select
+            hidden
+          >
+            选择整组
+          </button>
+          <button
+            class="private-button private-button--small private-button--primary"
+            type="button"
+            data-reader-done
+          >
+            关闭
+          </button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
 </PortalLayout>
 
 <script>
@@ -425,6 +460,13 @@ if (!getSession(Astro.request, process.env)) {
   const imageViewerCaption = document.querySelector<HTMLElement>('[data-image-viewer-caption]')!;
   const imageViewerOrigin = document.querySelector<HTMLAnchorElement>('[data-image-viewer-origin]')!;
   const imageViewerClose = document.querySelector<HTMLButtonElement>('[data-image-viewer-close]')!;
+  const readerDialog = document.querySelector<HTMLDialogElement>('[data-reader-dialog]')!;
+  const readerKicker = document.querySelector<HTMLElement>('[data-reader-kicker]')!;
+  const readerTitle = document.querySelector<HTMLElement>('[data-reader-title]')!;
+  const readerBody = document.querySelector<HTMLElement>('[data-reader-body]')!;
+  const readerMeta = document.querySelector<HTMLElement>('[data-reader-meta]')!;
+  const readerSelect = document.querySelector<HTMLButtonElement>('[data-reader-select]')!;
+  const readerDone = document.querySelector<HTMLButtonElement>('[data-reader-done]')!;
 
   const selectedIds = new Set<string>();
   const fragmentCache = new Map<string, Fragment>();
@@ -448,6 +490,7 @@ if (!getSession(Astro.request, process.env)) {
   let composeSource: EventSource | null = null;
   let composePlan: ComposePlan | null = null;
   let composeFragments: Fragment[] = [];
+  let readerFragments: Fragment[] = [];
   let composeSections = new Map<number, string>();
   let composeMarkdown = '';
   let composeWarnings: string[] = [];
@@ -611,6 +654,18 @@ if (!getSession(Astro.request, process.env)) {
     }
     lastSelectedId = ids[0];
     syncSelectionUI();
+  }
+
+  function attachReaderClick(card: HTMLElement, fragment: Fragment): void {
+    if (!card.classList.contains('fragment-card--quote')) return;
+    card.classList.add('is-readable');
+    card.addEventListener('click', (event) => {
+      if (selecting || suppressCardClick) return;
+      const target = event.target as HTMLElement;
+      if (target.closest('a, button, input, textarea, select, label, form')) return;
+      if (window.getSelection()?.toString().trim()) return;
+      openReader([fragment]);
+    });
   }
 
   function attachCardSelection(card: HTMLElement, fragment: Fragment): void {
@@ -1211,6 +1266,27 @@ if (!getSession(Astro.request, process.env)) {
    * to stretch, and later cards fill the shorter column instead of leaving a
    * large hole under it. Cards keep their natural height.
    */
+  function markClampedCard(card: HTMLElement): void {
+    const quote = card.querySelector<HTMLElement>('.fragment-quote');
+    if (!quote) return;
+    const clamped = quote.scrollHeight > quote.clientHeight + 2;
+    card.classList.toggle('is-clamped', clamped);
+    const hint = card.querySelector<HTMLButtonElement>('.fragment-read-hint');
+    if (hint) hint.hidden = !clamped;
+  }
+
+  function markClampedCards(cards: HTMLElement[]): void {
+    for (const card of cards) {
+      if (card.classList.contains('fragment-card')) {
+        markClampedCard(card);
+        continue;
+      }
+      for (const child of card.querySelectorAll<HTMLElement>('.fragment-card')) {
+        markClampedCard(child);
+      }
+    }
+  }
+
   function layoutCards(
     cards: HTMLElement[],
     options: { animate?: boolean; oldRects?: Map<string, DOMRect> } = {},
@@ -1238,6 +1314,7 @@ if (!getSession(Astro.request, process.env)) {
       shortest.append(card);
     }
     lastMasonryColumns = count;
+    markClampedCards(cards);
 
     if (oldRects.size === 0 || prefersReducedMotion()) return;
 
@@ -2005,6 +2082,93 @@ if (!getSession(Astro.request, process.env)) {
     if (!imageViewer.open) imageViewer.showModal();
   }
 
+  function renderReaderEntry(fragment: Fragment): HTMLElement {
+    const entry = document.createElement('article');
+    entry.className = 'reader-entry';
+
+    if (fragment.kind === 'link') {
+      const preview = fragment.metadata?.preview;
+      const titleText = preview?.title || fragment.sourceTitle || fragment.sourceSite;
+      if (titleText) {
+        const title = document.createElement('h3');
+        title.className = 'reader-entry-title';
+        title.textContent = titleText;
+        entry.append(title);
+      }
+    }
+
+    if (fragment.kind === 'image') {
+      const image = imageOf(fragment);
+      if (image) {
+        const img = document.createElement('img');
+        img.className = 'reader-image';
+        img.src = image.src;
+        img.alt = image.alt || fragment.quote || '图片碎片';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        entry.append(img);
+      }
+    }
+
+    const quote = document.createElement('blockquote');
+    quote.className = 'reader-quote';
+    quote.textContent = fragment.metadata?.preview?.description || fragment.quote;
+    entry.append(quote);
+
+    if (fragment.note) {
+      const note = document.createElement('p');
+      note.className = 'reader-note';
+      note.textContent = fragment.note;
+      entry.append(note);
+    }
+
+    if (fragment.tags.length > 0) {
+      const tags = document.createElement('div');
+      tags.className = 'reader-tags';
+      for (const tag of fragment.tags) {
+        const item = document.createElement('span');
+        item.textContent = tag;
+        tags.append(item);
+      }
+      entry.append(tags);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'reader-meta';
+    const time = document.createElement('time');
+    time.dateTime = fragment.capturedAt;
+    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
+    meta.append(time);
+    if (fragment.sourceUrl) {
+      const source = document.createElement('a');
+      source.href = fragment.sourceUrl;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+      source.textContent = fragment.sourceTitle || fragment.sourceSite || '打开来源';
+      meta.append(source);
+    }
+    entry.append(meta);
+
+    return entry;
+  }
+
+  function openReader(fragments: Fragment[], groupIdValue = ''): void {
+    if (fragments.length === 0) return;
+    const first = fragments[0];
+    readerFragments = fragments;
+    readerKicker.textContent = groupIdValue ? `同页 · ${fragments.length} 条` : 'Fragment';
+    readerTitle.textContent =
+      first.sourceTitle || first.sourceSite || (groupIdValue ? '同页碎片' : '碎片原文');
+    readerBody.replaceChildren();
+    for (const fragment of fragments) readerBody.append(renderReaderEntry(fragment));
+    readerMeta.textContent = groupIdValue
+      ? `${fragments.length} 条同页碎片`
+      : `捕获于 ${dateFormat.format(new Date(first.capturedAt))}`;
+    readerSelect.hidden = !groupIdValue;
+    readerSelect.textContent = '选择整组';
+    if (!readerDialog.open) readerDialog.showModal();
+  }
+
   function renderImage(fragment: Fragment, image: ImageMetadata): HTMLElement {
     const card = document.createElement('article');
     card.className = 'fragment-card fragment-card--image';
@@ -2208,6 +2372,7 @@ if (!getSession(Astro.request, process.env)) {
     card.append(meta);
 
     card.append(renderActions(card, fragment));
+    attachReaderClick(card, fragment);
     attachCardSelection(card, fragment);
 
     return card;
@@ -2251,6 +2416,17 @@ if (!getSession(Astro.request, process.env)) {
     const actions = document.createElement('div');
     actions.className = 'fragment-group__actions';
 
+    const viewButton = document.createElement('button');
+    viewButton.type = 'button';
+    viewButton.className = 'fragment-group__action';
+    viewButton.dataset.groupView = '';
+    viewButton.textContent = '查看整组';
+    viewButton.setAttribute('aria-label', '弹窗查看本组全部碎片');
+    viewButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      openReader(fragments, groupIdValue);
+    });
+
     const selectButton = document.createElement('button');
     selectButton.type = 'button';
     selectButton.className = 'fragment-group__action';
@@ -2279,7 +2455,7 @@ if (!getSession(Astro.request, process.env)) {
       layoutCards(renderedCards, { animate: true, oldRects });
     });
 
-    actions.append(selectButton, toggle);
+    actions.append(viewButton, selectButton, toggle);
     head.append(identity, actions);
 
     const body = document.createElement('div');
@@ -2305,6 +2481,17 @@ if (!getSession(Astro.request, process.env)) {
     quote.className = 'fragment-quote';
     quote.textContent = fragment.quote;
     card.append(quote);
+
+    const readHint = document.createElement('button');
+    readHint.type = 'button';
+    readHint.className = 'fragment-read-hint';
+    readHint.textContent = '点击查看全文';
+    readHint.hidden = true;
+    readHint.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openReader([fragment]);
+    });
+    card.append(readHint);
 
     if (fragment.note) {
       const note = document.createElement('p');
@@ -2347,6 +2534,7 @@ if (!getSession(Astro.request, process.env)) {
     card.append(meta);
 
     card.append(renderActions(card, fragment));
+    attachReaderClick(card, fragment);
     attachCardSelection(card, fragment);
 
     return card;
@@ -2549,6 +2737,7 @@ if (!getSession(Astro.request, process.env)) {
   window.addEventListener('resize', () => {
     syncCalendarMonths();
     syncMasonryColumns();
+    markClampedCards(renderedCards);
   });
 
   for (const button of datePresetButtons) {
@@ -2712,6 +2901,26 @@ if (!getSession(Astro.request, process.env)) {
   imageViewer.addEventListener('close', () => {
     imageViewerImage.removeAttribute('src');
     imageViewerCaption.textContent = '';
+  });
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-reader-close]')) {
+    button.addEventListener('click', () => readerDialog.close());
+  }
+  readerDone.addEventListener('click', () => readerDialog.close());
+  readerDialog.addEventListener('click', (event) => {
+    if (event.target === readerDialog) readerDialog.close();
+  });
+  readerDialog.addEventListener('close', () => {
+    readerFragments = [];
+    readerBody.replaceChildren();
+  });
+  readerSelect.addEventListener('click', () => {
+    if (readerFragments.length === 0) return;
+    if (!selecting) setSelecting(true);
+    for (const fragment of readerFragments) selectedIds.add(fragment.id);
+    lastSelectedId = readerFragments[0].id;
+    syncSelectionUI();
+    readerDialog.close();
   });
 
   logout?.addEventListener('click', async () => {
