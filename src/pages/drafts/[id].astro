@@ -1,0 +1,484 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { getSession } from '@/lib/private-auth';
+import '@/styles/private.css';
+
+export const prerender = false;
+
+Astro.response.headers.set('cache-control', 'no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+
+if (!getSession(Astro.request, process.env)) {
+  return Astro.redirect(`/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const draftId = Astro.params.id ?? '';
+---
+
+<PortalLayout title="Draft" noindex bare private bodyClass="private-body">
+  <header class="private-bar">
+    <a class="private-brand" href="/">Josh</a>
+    <nav aria-label="私有导航">
+      <a href="/inbox">Inbox</a>
+      <a href="/drafts">Drafts</a>
+      <a href="/">回到门户</a>
+      <button class="fragment-delete" type="button" data-logout>退出</button>
+    </nav>
+  </header>
+
+  <main class="private-shell draft-shell" data-draft-editor data-draft-id={draftId}>
+    <header class="private-head draft-head">
+      <div>
+        <p class="private-eyebrow">Draft workspace</p>
+        <h1 data-draft-heading>草稿</h1>
+        <p>编辑 Markdown，右侧实时预览；来源侧栏保留每条引用的原文和 URL。导出不会自动发布。</p>
+      </div>
+      <a class="private-button" href="/drafts">所有草稿</a>
+    </header>
+
+    <p class="private-status" data-draft-status aria-live="polite">读取中…</p>
+
+    <form class="draft-form" data-draft-form>
+      <div class="draft-title-row">
+        <label class="private-label" for="draft-title">标题</label>
+        <input
+          class="private-input"
+          id="draft-title"
+          data-draft-title
+          type="text"
+          autocomplete="off"
+          maxlength="500"
+          required
+        />
+        <select class="private-input draft-status-select" data-draft-status-select aria-label="草稿状态">
+          <option value="draft">草稿</option>
+          <option value="exported">已导出</option>
+          <option value="archived">已归档</option>
+        </select>
+        <button class="private-button private-button--primary" type="submit" data-draft-save>
+          保存
+        </button>
+        <button class="private-button" type="button" data-draft-export>导出 .md</button>
+        <button class="private-button draft-delete" type="button" data-draft-delete>删除</button>
+      </div>
+
+      <div class="draft-editor-layout">
+        <section class="draft-editor-pane">
+          <header class="draft-pane-head">
+            <span>Markdown</span>
+            <span data-draft-word>0 字</span>
+          </header>
+          <textarea
+            class="draft-textarea"
+            data-draft-markdown
+            spellcheck="false"
+            aria-label="草稿 Markdown"
+          ></textarea>
+        </section>
+
+        <section class="draft-preview-pane">
+          <header class="draft-pane-head">
+            <span>预览</span>
+            <span data-draft-unsaved></span>
+          </header>
+          <article class="draft-preview" data-draft-preview></article>
+        </section>
+
+        <aside class="draft-sources-pane">
+          <header class="draft-pane-head">
+            <span>来源</span>
+            <span data-draft-source-count>0</span>
+          </header>
+          <div class="draft-sources" data-draft-sources></div>
+        </aside>
+      </div>
+    </form>
+  </main>
+
+  <div class="draft-snackbar" data-draft-snackbar hidden>
+    <span data-draft-snackbar-text>已删除</span>
+    <button class="private-button private-button--small" type="button" data-draft-undo>
+      撤销
+    </button>
+  </div>
+</PortalLayout>
+
+<script>
+  interface Citation {
+    token: string;
+    fragmentId?: string;
+    title: string;
+    url: string;
+    quote: string;
+  }
+
+  interface DraftDetail {
+    id: string;
+    title: string;
+    slug: string;
+    markdown: string;
+    citations: Citation[];
+    status: 'draft' | 'exported' | 'archived';
+    updatedAt: string;
+    sourceCount?: number;
+  }
+
+  interface DraftResponse {
+    ok?: boolean;
+    data?: DraftDetail;
+    error?: { message?: string };
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-draft-editor]');
+  const status = document.querySelector<HTMLElement>('[data-draft-status]');
+  const heading = document.querySelector<HTMLElement>('[data-draft-heading]');
+  const form = document.querySelector<HTMLFormElement>('[data-draft-form]');
+  const titleInput = document.querySelector<HTMLInputElement>('[data-draft-title]');
+  const statusSelect = document.querySelector<HTMLSelectElement>('[data-draft-status-select]');
+  const markdownInput = document.querySelector<HTMLTextAreaElement>('[data-draft-markdown]');
+  const preview = document.querySelector<HTMLElement>('[data-draft-preview]');
+  const wordNode = document.querySelector<HTMLElement>('[data-draft-word]');
+  const unsavedNode = document.querySelector<HTMLElement>('[data-draft-unsaved]');
+  const sources = document.querySelector<HTMLElement>('[data-draft-sources]');
+  const sourceCount = document.querySelector<HTMLElement>('[data-draft-source-count]');
+  const saveButton = document.querySelector<HTMLButtonElement>('[data-draft-save]');
+  const exportButton = document.querySelector<HTMLButtonElement>('[data-draft-export]');
+  const deleteButton = document.querySelector<HTMLButtonElement>('[data-draft-delete]');
+  const logout = document.querySelector<HTMLButtonElement>('[data-logout]');
+  const snackbar = document.querySelector<HTMLElement>('[data-draft-snackbar]');
+  const snackbarText = document.querySelector<HTMLElement>('[data-draft-snackbar-text]');
+  const undoButton = document.querySelector<HTMLButtonElement>('[data-draft-undo]');
+
+  const draftId = root?.dataset.draftId ?? '';
+  let draft: DraftDetail | null = null;
+  let dirty = false;
+  let deleted = false;
+  let undoTimer = 0;
+
+  const statusText: Record<string, string> = {
+    draft: '草稿',
+    exported: '已导出',
+    archived: '已归档',
+  };
+
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function inline(value: string): string {
+    let text = escapeHtml(value);
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    text = text.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    );
+    text = text.replace(
+      /\[(f\d+)\]/gi,
+      '<button type="button" class="draft-ref" data-ref="$1">[$1]</button>',
+    );
+    return text;
+  }
+
+  function renderBlock(block: string): string {
+    const trimmed = block.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('```')) {
+      const code = trimmed.replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
+      return `<pre><code>${escapeHtml(code)}</code></pre>`;
+    }
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      return `<h${level}>${inline(headingMatch[2])}</h${level}>`;
+    }
+    if (/^>\s?/m.test(trimmed) && trimmed.split('\n').every((line) => /^>\s?/.test(line))) {
+      const body = trimmed
+        .split('\n')
+        .map((line) => line.replace(/^>\s?/, ''))
+        .join('\n');
+      return `<blockquote>${inline(body).replace(/\n/g, '<br />')}</blockquote>`;
+    }
+    if (/^\s*[-*+]\s+/m.test(trimmed)) {
+      const items = trimmed
+        .split('\n')
+        .filter((line) => /^\s*[-*+]\s+/.test(line))
+        .map((line) => `<li>${inline(line.replace(/^\s*[-*+]\s+/, ''))}</li>`);
+      return `<ul>${items.join('')}</ul>`;
+    }
+    if (/^\s*\d+\.\s+/m.test(trimmed)) {
+      const items = trimmed
+        .split('\n')
+        .filter((line) => /^\s*\d+\.\s+/.test(line))
+        .map((line) => `<li>${inline(line.replace(/^\s*\d+\.\s+/, ''))}</li>`);
+      return `<ol>${items.join('')}</ol>`;
+    }
+    return `<p>${inline(trimmed).replace(/\n/g, '<br />')}</p>`;
+  }
+
+  function renderMarkdown(markdown: string): string {
+    const tokens = markdown.split(/(```[\s\S]*?```)/g);
+    return tokens.map((token) => {
+      if (token.startsWith('```')) return renderBlock(token);
+      return token.split(/\n{2,}/).map(renderBlock).join('');
+    }).join('');
+  }
+
+  function setDirty(value: boolean): void {
+    dirty = value;
+    if (unsavedNode) unsavedNode.textContent = value ? '未保存' : '';
+    if (saveButton) saveButton.classList.toggle('is-dirty', value);
+  }
+
+  function renderPreview(): void {
+    if (!markdownInput || !preview) return;
+    const markdown = markdownInput.value;
+    preview.innerHTML = renderMarkdown(markdown);
+    if (wordNode) wordNode.textContent = `${markdown.replace(/\s/g, '').length} 字`;
+    for (const ref of preview.querySelectorAll<HTMLElement>('[data-ref]')) {
+      ref.addEventListener('click', () => {
+        const token = ref.dataset.ref;
+        const item = sources?.querySelector<HTMLElement>(
+          `[data-source-token="${CSS.escape(token ?? '')}"]`,
+        );
+        item?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        item?.classList.add('is-highlight');
+        window.setTimeout(() => item?.classList.remove('is-highlight'), 1200);
+      });
+    }
+  }
+
+  function renderSources(): void {
+    if (!sources) return;
+    const citations = draft?.citations ?? [];
+    sources.replaceChildren();
+    if (sourceCount) sourceCount.textContent = String(citations.length);
+    if (citations.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'draft-source-empty';
+      empty.textContent = '这篇草稿没有来源映射。';
+      sources.append(empty);
+      return;
+    }
+    for (const citation of citations) {
+      const item = document.createElement('article');
+      item.className = 'draft-source-item';
+      item.dataset.sourceToken = citation.token;
+      const token = document.createElement('span');
+      token.className = 'draft-source-token';
+      token.textContent = `[${citation.token}]`;
+      const title = document.createElement('strong');
+      title.textContent = citation.title || '来源';
+      const quote = document.createElement('p');
+      quote.textContent = citation.quote || '';
+      item.append(token, title, quote);
+      if (citation.url) {
+        const link = document.createElement('a');
+        link.href = citation.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = '打开来源 ↗';
+        item.append(link);
+      }
+      sources.append(item);
+    }
+  }
+
+  function applyDraft(data: DraftDetail): void {
+    draft = data;
+    if (titleInput) titleInput.value = data.title;
+    if (heading) heading.textContent = data.title || '草稿';
+    if (statusSelect) statusSelect.value = data.status;
+    if (markdownInput) markdownInput.value = data.markdown;
+    if (status) status.textContent = `${statusText[data.status] || data.status} · ${data.sourceCount ?? data.citations.length} 个来源`;
+    renderPreview();
+    renderSources();
+    setDirty(false);
+  }
+
+  async function load(): Promise<void> {
+    if (!draftId) return;
+    try {
+      const response = await fetch(`/api/drafts/${encodeURIComponent(draftId)}`);
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(location.pathname)}`);
+        return;
+      }
+      const data = (await response.json()) as DraftResponse;
+      if (!response.ok || !data.ok || !data.data) {
+        throw new Error(data.error?.message || '读取草稿失败。');
+      }
+      applyDraft(data.data);
+    } catch (error) {
+      if (status) status.textContent = error instanceof Error ? error.message : '读取草稿失败。';
+      if (form) form.classList.add('is-disabled');
+    }
+  }
+
+  async function save(): Promise<void> {
+    if (!draft || !titleInput || !markdownInput || !statusSelect || deleted) return;
+    if (saveButton) saveButton.disabled = true;
+    if (status) status.textContent = '保存中…';
+    try {
+      const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: titleInput.value,
+          markdown: markdownInput.value,
+          status: statusSelect.value,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as DraftResponse;
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(location.pathname)}`);
+        return;
+      }
+      if (!response.ok || !data.ok || !data.data) {
+        throw new Error(data.error?.message || '保存失败。');
+      }
+      applyDraft(data.data);
+      if (status) status.textContent = '已保存。';
+      if (heading) heading.textContent = data.data.title;
+      history.replaceState(null, '', `/drafts/${encodeURIComponent(data.data.id)}`);
+    } catch (error) {
+      if (status) status.textContent = error instanceof Error ? error.message : '保存失败。';
+    } finally {
+      if (saveButton) saveButton.disabled = false;
+    }
+  }
+
+  async function exportDraft(): Promise<void> {
+    if (!draft || deleted) return;
+    if (dirty) {
+      await save();
+      if (dirty) return;
+    }
+    if (status) status.textContent = '正在导出…';
+    try {
+      const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}/export`);
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(location.pathname)}`);
+        return;
+      }
+      if (!response.ok) throw new Error('导出失败。');
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+      const filename = match
+        ? decodeURIComponent(match[1])
+        : `${draft.slug || 'draft'}.md`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (status) status.textContent = `已导出 ${filename}。`;
+    } catch (error) {
+      if (status) status.textContent = error instanceof Error ? error.message : '导出失败。';
+    }
+  }
+
+  function showSnackbar(text: string): void {
+    if (!snackbar || !snackbarText) return;
+    snackbarText.textContent = text;
+    snackbar.hidden = false;
+  }
+
+  function hideSnackbar(): void {
+    if (snackbar) snackbar.hidden = true;
+  }
+
+  async function removeDraft(): Promise<void> {
+    if (!draft || deleted) return;
+    if (deleteButton) deleteButton.disabled = true;
+    if (status) status.textContent = '删除中…';
+    try {
+      const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}`, {
+        method: 'DELETE',
+      });
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(location.pathname)}`);
+        return;
+      }
+      if (!response.ok) throw new Error('删除失败。');
+      deleted = true;
+      setDirty(false);
+      if (form) form.classList.add('is-disabled');
+      showSnackbar(`已删除「${draft.title || '未命名草稿'}」`);
+      if (status) status.textContent = '已删除，3 秒内可撤销。';
+      window.clearTimeout(undoTimer);
+      undoTimer = window.setTimeout(() => {
+        hideSnackbar();
+        window.location.assign('/drafts');
+      }, 3000);
+    } catch (error) {
+      if (deleteButton) deleteButton.disabled = false;
+      if (status) status.textContent = error instanceof Error ? error.message : '删除失败。';
+    }
+  }
+
+  async function undoDelete(): Promise<void> {
+    if (!draft) return;
+    window.clearTimeout(undoTimer);
+    hideSnackbar();
+    try {
+      const response = await fetch(
+        `/api/drafts/${encodeURIComponent(draft.id)}/restore`,
+        { method: 'POST' },
+      );
+      if (!response.ok) throw new Error('撤销失败。');
+      deleted = false;
+      if (form) form.classList.remove('is-disabled');
+      if (deleteButton) deleteButton.disabled = false;
+      if (status) status.textContent = '已撤销删除。';
+      await load();
+    } catch (error) {
+      showSnackbar(error instanceof Error ? error.message : '撤销失败。');
+    }
+  }
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void save();
+  });
+  titleInput?.addEventListener('input', () => {
+    if (heading) heading.textContent = titleInput.value || '草稿';
+    setDirty(true);
+  });
+  markdownInput?.addEventListener('input', () => {
+    renderPreview();
+    setDirty(true);
+  });
+  statusSelect?.addEventListener('change', () => setDirty(true));
+  exportButton?.addEventListener('click', () => void exportDraft());
+  deleteButton?.addEventListener('click', () => void removeDraft());
+  undoButton?.addEventListener('click', () => void undoDelete());
+  logout?.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/login');
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      void save();
+    }
+  });
+  window.addEventListener('beforeunload', (event) => {
+    if (!dirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  void load();
+</script>

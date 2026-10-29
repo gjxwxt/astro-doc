@@ -120,7 +120,7 @@ cp .env.example .env
 | 变量 | 用途 |
 | --- | --- |
 | `SITE_URL` | canonical、sitemap、RSS、MCP 使用的公开地址 |
-| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | OpenAI 兼容的对话接口；不填 key 时自动降级 |
+| `AI_BASE_URL` / `AI_API_KEY` / `GEMINI_API_KEY` / `AI_MODEL` / `AI_REASONING_EFFORT` | OpenAI 兼容的对话接口；Gemini 可只填 `GEMINI_API_KEY`，`AI_REASONING_EFFORT=low` 控制思考强度 |
 | `PORTAL_API_TOKEN` | 可选，外部调用 `/api/*` 时的 Bearer Token |
 | `MEDIA_RESOLVER_URL` / `MEDIA_RESOLVER_TOKEN` | 可选，视频解析服务 |
 
@@ -176,6 +176,7 @@ cp .env.example .env
 - [MCP 接入](docs/MCP.md)
 - [音乐下载](docs/MUSIC.md)
 - [AI 助手](docs/AI-ASSISTANT.md)
+- [Phase 2：碎片合成与草稿](docs/PHASE-2.md)
 - [评论与划线](docs/COMMENTS-AND-ANNOTATIONS.md)
 - [部署](docs/DEPLOYMENT.md)
 - [路线图](docs/ROADMAP.md)

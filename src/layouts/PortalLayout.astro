@@ -17,10 +17,17 @@ interface Props {
   bare?: boolean;
   bodyClass?: string;
   noindex?: boolean;
+  private?: boolean;
 }
 
-const { title, description = siteConfig.description, bare = false, bodyClass, noindex = false } =
-  Astro.props;
+const {
+  title,
+  description = siteConfig.description,
+  bare = false,
+  bodyClass,
+  noindex = false,
+  private: isPrivate = false,
+} = Astro.props;
 
 const pageTitle = title ? `${title} · ${siteConfig.name}` : siteConfig.title;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
@@ -68,8 +75,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
       <slot />
     </main>
     {!bare && <Footer />}
-    <SearchDialog />
-    <Assistant />
+    {!isPrivate && <SearchDialog />}
+    {!isPrivate && <Assistant />}
 
     <script>
       const root = document.documentElement;

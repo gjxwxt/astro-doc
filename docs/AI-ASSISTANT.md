@@ -17,6 +17,17 @@
 AI_BASE_URL=https://api.openai.com/v1
 AI_API_KEY=sk-...
 AI_MODEL=gpt-4o-mini
+# 可选。Gemini 兼容层用 low 就是低思考强度。
+AI_REASONING_EFFORT=
+```
+
+Gemini 可以先走 OpenAI 兼容接口。只用一把 Gemini key 时填 `GEMINI_API_KEY` 即可，公开助手会回退读取它：
+
+```bash
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+GEMINI_API_KEY=<Gemini key>
+AI_MODEL=gemini-3.8-flash
+AI_REASONING_EFFORT=low
 ```
 
 `AI_BASE_URL` 只需要兼容 `POST /chat/completions` 和 `stream: true`。常见组合：
@@ -26,9 +37,11 @@ AI_MODEL=gpt-4o-mini
 | OpenAI | `https://api.openai.com/v1` | 默认 |
 | OpenRouter | `https://openrouter.ai/api/v1` | 模型名按供应商写 |
 | DeepSeek | `https://api.deepseek.com/v1` | `AI_MODEL` 用它的模型名 |
+| Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | `AI_MODEL=gemini-3.8-flash`；`AI_REASONING_EFFORT=low` |
 | Ollama | `http://localhost:11434/v1` | 本地模型；注意服务器内存 |
 | 自建网关 | 你的网关 `/v1` | 需要支持 SSE |
 
+`AI_REASONING_EFFORT` 会作为 `reasoning_effort` 发给上游；Gemini 兼容层映射到 `thinking_level`，`low` 即低思考。留空就不发这个字段。
 没有 `AI_API_KEY` 时不会报错：助手返回检索结果，并在头部显示“检索模式”。
 
 ## 提示词

@@ -7,10 +7,13 @@ export interface ChatMessage {
   content: string;
 }
 
+type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
 interface AiConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 interface Source {
@@ -35,13 +38,21 @@ function sseHeaders(): HeadersInit {
   };
 }
 
+function parseReasoningEffort(value: string | undefined): ReasoningEffort | undefined {
+  const effort = value?.trim().toLowerCase();
+  return effort === 'minimal' || effort === 'low' || effort === 'medium' || effort === 'high'
+    ? effort
+    : undefined;
+}
+
 function config(env: Record<string, string | undefined>): AiConfig | null {
-  const apiKey = env.AI_API_KEY?.trim();
+  const apiKey = env.AI_API_KEY?.trim() || env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
   return {
     apiKey,
     baseUrl: (env.AI_BASE_URL?.trim() || 'https://api.openai.com/v1').replace(/\/+$/, ''),
     model: env.AI_MODEL?.trim() || 'gpt-4o-mini',
+    reasoningEffort: parseReasoningEffort(env.AI_REASONING_EFFORT),
   };
 }
 
@@ -54,7 +65,11 @@ function sourcesFrom(hits: SearchHit[]): Source[] {
   }));
 }
 
-function searchAnswer(hits: SearchHit[]): string {
+function searchAnswer(
+  hits: SearchHit[],
+  intro = '当前没有配置 AI key，我先按站内检索给你结果：',
+  hint = '配置 `AI_API_KEY` 或 `GEMINI_API_KEY` 后可以获得生成式回答，检索结果仍然会作为来源附在下面。',
+): string {
   if (hits.length === 0) {
     return '没有在站内找到相关的内容。可以试试直接打开 [工具](/tools/) 或 [笔记](/notes/)，或者换一个更具体的关键词。';
   }
@@ -64,7 +79,23 @@ function searchAnswer(hits: SearchHit[]): string {
     return `- [${hit.doc.title}](${hit.doc.url})${description ? `：${description.slice(0, 110)}` : ''}`;
   });
 
-  return `当前没有配置 AI key，我先按站内检索给你结果：\n\n${lines.join('\n')}\n\n配置 \`AI_API_KEY\` 后可以获得生成式回答，检索结果仍然会作为来源附在下面。`;
+  return `${intro}\n\n${lines.join('\n')}\n\n${hint}`;
+}
+
+function upstreamReason(detail: string): string {
+  if (!detail) return '';
+  try {
+    const data = JSON.parse(detail) as {
+      error?: { message?: string } | string;
+      message?: string;
+    };
+    const message =
+      typeof data.error === 'string' ? data.error : data.error?.message || data.message || '';
+    if (message) return message.slice(0, 120);
+  } catch {
+    /* not JSON */
+  }
+  return detail.slice(0, 120);
 }
 
 function buildContext(hits: SearchHit[]): string {
@@ -149,6 +180,7 @@ export async function createChatResponse(options: {
             stream: true,
             temperature: 0.2,
             max_tokens: 900,
+            ...(ai.reasoningEffort ? { reasoning_effort: ai.reasoningEffort } : {}),
             messages: [{ role: 'system', content: system }, ...messages],
           }),
           signal: controllerAbort.signal,
@@ -156,12 +188,19 @@ export async function createChatResponse(options: {
 
         if (!response.ok || !response.body) {
           const detail = await response.text().catch(() => '');
+          const reasonText = upstreamReason(detail);
+          const reason = reasonText ? `（${reasonText}）` : '';
+          controller.enqueue(sse('sources', { mode: 'search', sources }));
           controller.enqueue(
-            sse('error', {
-              message: `模型接口返回 ${response.status}${detail ? `：${detail.slice(0, 200)}` : ''}`,
+            sse('token', {
+              text: searchAnswer(
+                options.hits,
+                `AI 接口返回 ${response.status}${reason}，先按站内检索给你结果：`,
+                'AI 恢复后会继续使用生成式回答；检索结果仍然会作为来源附在下面。',
+              ),
             }),
           );
-          controller.enqueue(sse('done', { mode: 'ai' }));
+          controller.enqueue(sse('done', { mode: 'search' }));
           controller.close();
           return;
         }

@@ -1,0 +1,95 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { getSession } from '@/lib/private-auth';
+import '@/styles/private.css';
+
+export const prerender = false;
+
+Astro.response.headers.set('cache-control', 'no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+
+if (getSession(Astro.request, process.env)) return Astro.redirect('/inbox');
+
+const rawNext = Astro.url.searchParams.get('next') ?? '/inbox';
+const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/inbox';
+---
+
+<PortalLayout title="登录" noindex bare private bodyClass="private-body">
+  <header class="private-bar">
+    <a class="private-brand" href="/">Josh</a>
+    <nav aria-label="私有导航">
+      <a href="/">回到门户</a>
+    </nav>
+  </header>
+
+  <main class="private-login">
+    <section class="private-login-card" aria-labelledby="login-title">
+      <p class="private-eyebrow">Private workspace</p>
+      <h1 id="login-title">进入工作台</h1>
+      <p>这里只放碎片和草稿，不会出现在公开搜索、站点地图或公开 API 里。</p>
+
+      <form class="private-form" data-login-form data-next={next}>
+        <label class="private-label" for="admin-password">管理员密码</label>
+        <input
+          class="private-input"
+          id="admin-password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          autofocus
+        />
+        <p class="private-error" data-login-error role="alert" aria-live="polite"></p>
+        <button class="private-button private-button--primary" type="submit">进入 Inbox</button>
+      </form>
+
+      <p class="private-hint">
+        密码由服务器的 <code>ADMIN_PASSWORD</code> 控制。登录态是 HttpOnly cookie，不会写进前端代码。
+      </p>
+      <noscript><p class="private-error">登录需要启用 JavaScript。</p></noscript>
+    </section>
+  </main>
+</PortalLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-login-form]');
+  const errorElement = document.querySelector<HTMLElement>('[data-login-error]');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form || !errorElement) return;
+
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const input = form.querySelector<HTMLInputElement>('input[name="password"]');
+    if (!button || !input) return;
+
+    button.disabled = true;
+    errorElement.textContent = '';
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: input.value }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !data.ok) {
+        errorElement.textContent = data.error?.message || '登录失败，请重试。';
+        input.focus();
+        input.select();
+        return;
+      }
+
+      const next = form.dataset.next || '/inbox';
+      window.location.assign(next);
+    } catch {
+      errorElement.textContent = '网络请求失败，请重试。';
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

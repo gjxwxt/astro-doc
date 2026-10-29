@@ -4,9 +4,11 @@ dist
 .git
 .env
 .env.*
+data/
 !.env.example
 .taste-skill
 .content-sync-state.json
 content-sync.config.json
 *.log
 .DS_Store
+extension/

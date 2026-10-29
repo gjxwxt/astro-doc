@@ -27,3 +27,6 @@ content-sync.config.json
 
 # macOS
 .DS_Store
+
+# Phase 2 private data
+data/

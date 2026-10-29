@@ -1,0 +1,230 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { getSession } from '@/lib/private-auth';
+import '@/styles/private.css';
+
+export const prerender = false;
+
+Astro.response.headers.set('cache-control', 'no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+
+if (!getSession(Astro.request, process.env)) {
+  return Astro.redirect(`/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+---
+
+<PortalLayout title="Drafts" noindex bare private bodyClass="private-body">
+  <header class="private-bar">
+    <a class="private-brand" href="/">Josh</a>
+    <nav aria-label="私有导航">
+      <a href="/inbox">Inbox</a>
+      <a href="/drafts" aria-current="page">Drafts</a>
+      <a href="/">回到门户</a>
+      <button class="fragment-delete" type="button" data-logout>退出</button>
+    </nav>
+  </header>
+
+  <main class="private-shell" data-drafts-list>
+    <header class="private-head">
+      <div>
+        <p class="private-eyebrow">Private workspace</p>
+        <h1>Drafts</h1>
+        <p>合成后的草稿先落在这里。改到满意再导出 Markdown；删除草稿不会动原始碎片。</p>
+      </div>
+      <a class="private-button" href="/inbox">回到 Inbox</a>
+    </header>
+
+    <p class="private-status" data-drafts-status aria-live="polite">读取中…</p>
+    <div class="draft-list" data-draft-list></div>
+  </main>
+
+  <div class="draft-snackbar" data-draft-snackbar hidden>
+    <span data-draft-snackbar-text>已删除</span>
+    <button class="private-button private-button--small" type="button" data-draft-undo>
+      撤销
+    </button>
+  </div>
+</PortalLayout>
+
+<script>
+  interface DraftSummary {
+    id: string;
+    title: string;
+    slug: string;
+    status: 'draft' | 'exported' | 'archived';
+    sourceCount: number;
+    updatedAt: string;
+  }
+
+  interface DraftListResponse {
+    ok?: boolean;
+    data?: { drafts?: DraftSummary[]; total?: number };
+    error?: { message?: string };
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-drafts-list]');
+  const list = document.querySelector<HTMLElement>('[data-draft-list]');
+  const status = document.querySelector<HTMLElement>('[data-drafts-status]');
+  const logout = document.querySelector<HTMLButtonElement>('[data-logout]');
+  const snackbar = document.querySelector<HTMLElement>('[data-draft-snackbar]');
+  const snackbarText = document.querySelector<HTMLElement>('[data-draft-snackbar-text]');
+  const undoButton = document.querySelector<HTMLButtonElement>('[data-draft-undo]');
+
+  const dateFormat = new Intl.DateTimeFormat('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const statusText: Record<string, string> = {
+    draft: '草稿',
+    exported: '已导出',
+    archived: '已归档',
+  };
+
+  let pendingDelete: DraftSummary | null = null;
+  let undoTimer = 0;
+
+  function showSnackbar(text: string): void {
+    if (!snackbar || !snackbarText) return;
+    snackbarText.textContent = text;
+    snackbar.hidden = false;
+  }
+
+  function hideSnackbar(): void {
+    if (snackbar) snackbar.hidden = true;
+  }
+
+  function clearPending(): void {
+    window.clearTimeout(undoTimer);
+    pendingDelete = null;
+    hideSnackbar();
+  }
+
+  function draftCard(draft: DraftSummary): HTMLElement {
+    const article = document.createElement('article');
+    article.className = 'draft-card';
+    article.dataset.draftId = draft.id;
+
+    const link = document.createElement('a');
+    link.className = 'draft-card-link';
+    link.href = `/drafts/${encodeURIComponent(draft.id)}`;
+    const title = document.createElement('h2');
+    title.textContent = draft.title || '未命名草稿';
+    const excerpt = document.createElement('p');
+    excerpt.textContent = `${draft.sourceCount} 个来源 · ${statusText[draft.status] || draft.status}`;
+    const time = document.createElement('time');
+    time.dateTime = draft.updatedAt;
+    time.textContent = `更新于 ${dateFormat.format(new Date(draft.updatedAt))}`;
+    link.append(title, excerpt, time);
+    article.append(link);
+
+    const actions = document.createElement('div');
+    actions.className = 'draft-card-actions';
+    const open = document.createElement('a');
+    open.className = 'private-button private-button--small';
+    open.href = link.href;
+    open.textContent = '打开';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'private-button private-button--small draft-delete';
+    remove.textContent = '删除';
+    remove.addEventListener('click', () => {
+      void removeDraft(draft, article, remove);
+    });
+    actions.append(open, remove);
+    article.append(actions);
+    return article;
+  }
+
+  async function removeDraft(
+    draft: DraftSummary,
+    card: HTMLElement,
+    button: HTMLButtonElement,
+  ): Promise<void> {
+    button.disabled = true;
+    button.textContent = '删除中';
+    try {
+      const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}`, {
+        method: 'DELETE',
+      });
+      if (response.status === 401) {
+        window.location.assign('/login?next=/drafts');
+        return;
+      }
+      if (!response.ok) throw new Error('删除失败。');
+      card.classList.add('is-removed');
+      pendingDelete = draft;
+      showSnackbar(`已删除「${draft.title || '未命名草稿'}」`);
+      window.clearTimeout(undoTimer);
+      undoTimer = window.setTimeout(() => {
+        clearPending();
+        void load();
+      }, 3000);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = '删除';
+      if (status) status.textContent = error instanceof Error ? error.message : '删除失败。';
+    }
+  }
+
+  async function undoDelete(): Promise<void> {
+    if (!pendingDelete) return;
+    const draft = pendingDelete;
+    window.clearTimeout(undoTimer);
+    hideSnackbar();
+    try {
+      const response = await fetch(
+        `/api/drafts/${encodeURIComponent(draft.id)}/restore`,
+        { method: 'POST' },
+      );
+      if (!response.ok) throw new Error('撤销失败。');
+      pendingDelete = null;
+      if (status) status.textContent = '已撤销删除。';
+      await load();
+    } catch (error) {
+      showSnackbar(error instanceof Error ? error.message : '撤销失败。');
+      undoTimer = window.setTimeout(() => {
+        clearPending();
+        void load();
+      }, 3000);
+    }
+  }
+
+  async function load(): Promise<void> {
+    if (!list || !status) return;
+    status.textContent = '读取中…';
+    try {
+      const response = await fetch('/api/drafts?limit=100');
+      if (response.status === 401) {
+        window.location.assign('/login?next=/drafts');
+        return;
+      }
+      const data = (await response.json()) as DraftListResponse;
+      if (!response.ok || !data.ok) throw new Error(data.error?.message || '读取失败。');
+      const drafts = data.data?.drafts ?? [];
+      list.replaceChildren();
+      if (drafts.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'private-empty';
+        empty.innerHTML = '还没有草稿。去 <a href="/inbox">Inbox</a> 选几条碎片，合成一篇。';
+        list.append(empty);
+      } else {
+        for (const draft of drafts) list.append(draftCard(draft));
+      }
+      const total = data.data?.total ?? drafts.length;
+      status.textContent = `共 ${total} 篇草稿`;
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : '读取失败。';
+    }
+  }
+
+  undoButton?.addEventListener('click', () => void undoDelete());
+  logout?.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/login');
+  });
+
+  void root;
+  void load();
+</script>

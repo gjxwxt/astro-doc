@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>保存到 Josh Inbox</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div>
+        <p class="eyebrow">Josh Inbox</p>
+        <h1 data-mode-title>正在读取…</h1>
+      </div>
+      <button class="icon-button" type="button" data-toggle-settings aria-label="设置">⚙</button>
+    </header>
+
+    <section class="settings" data-settings hidden>
+      <label>
+        API 地址
+        <input type="url" data-base-url placeholder="http://localhost:4400" />
+      </label>
+      <label>
+        私有 Token
+        <input type="password" data-token placeholder="PRIVATE_API_TOKEN" autocomplete="off" />
+      </label>
+      <button class="button button--ghost" type="button" data-save-settings>保存设置</button>
+      <p class="hint">Token 在本地 <code>.env.local</code> 的 <code>PRIVATE_API_TOKEN</code>；只存本机扩展存储。</p>
+    </section>
+
+    <main class="body">
+      <p class="error" data-error role="alert" aria-live="polite"></p>
+
+      <section class="selection" data-selection hidden>
+        <blockquote data-quote></blockquote>
+        <p class="source" data-source></p>
+      </section>
+
+      <section class="link-mode" data-link-mode hidden>
+        <p class="source" data-link-source></p>
+        <p class="hint">没有选中文字，会保存为链接卡片；服务端会尝试读取标题和封面。</p>
+      </section>
+
+      <label class="field">
+        随想
+        <textarea data-note rows="3" maxlength="5000" placeholder="为什么想留下它？（可选）"></textarea>
+      </label>
+
+      <label class="field">
+        标签
+        <input data-tags placeholder="写作, AI, 待读" autocomplete="off" />
+      </label>
+
+      <button class="button button--primary" type="button" data-save disabled>保存到 Inbox</button>
+      <p class="status" data-status role="status" aria-live="polite"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

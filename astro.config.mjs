@@ -75,7 +75,10 @@ export default defineConfig({
         !page.includes('/api/') &&
         !page.includes('/search-index') &&
         !page.includes('/notes/rss.xml') &&
-        !page.endsWith('/404/'),
+        !page.endsWith('/404/') &&
+        !page.includes('/login') &&
+        !page.includes('/inbox') &&
+        !page.includes('/drafts'),
     }),
   ],
   vite: {

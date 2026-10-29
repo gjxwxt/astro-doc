@@ -1,0 +1,2611 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { getSession } from '@/lib/private-auth';
+import '@/styles/private.css';
+
+export const prerender = false;
+
+Astro.response.headers.set('cache-control', 'no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+
+if (!getSession(Astro.request, process.env)) {
+  return Astro.redirect(`/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+---
+
+<PortalLayout title="Inbox" noindex bare private bodyClass="private-body">
+  <header class="private-bar">
+    <a class="private-brand" href="/">Josh</a>
+    <nav aria-label="私有导航">
+      <a href="/inbox">Inbox</a>
+      <a href="/drafts">Drafts</a>
+      <a href="/">回到门户</a>
+      <button class="fragment-delete" type="button" data-logout>退出</button>
+    </nav>
+  </header>
+
+  <main class="private-shell" data-inbox>
+    <header class="private-head">
+      <div>
+        <p class="private-eyebrow">Private workspace</p>
+        <h1>Inbox</h1>
+        <p>选中的碎片会先落在这里。第二阶段先打通采集和去重，合成工作台随后接上。</p>
+      </div>
+    </header>
+
+    <form class="private-link-form" data-link-form>
+      <div class="private-link-inputs">
+        <label class="private-label" for="link-url" hidden>链接地址</label>
+        <input
+          class="private-input"
+          id="link-url"
+          name="url"
+          type="url"
+          placeholder="粘贴 X / 抖音 / 任意链接…"
+          autocomplete="off"
+          required
+        />
+        <input
+          class="private-input"
+          name="note"
+          type="text"
+          placeholder="补一句随想（可选）"
+          autocomplete="off"
+          maxlength="5000"
+        />
+      </div>
+      <button class="private-button private-button--primary" type="submit">保存链接</button>
+    </form>
+
+    <div class="private-toolbar">
+      <div class="private-tag-chips" data-tag-chips aria-label="按标签筛选">
+        <button class="private-chip is-active" type="button" data-tag="">全部</button>
+      </div>
+      <div class="private-view-actions">
+        <button class="private-button private-button--small" type="button" data-sort>
+          最新优先
+        </button>
+        <div class="private-layout-switch" role="group" aria-label="卡片布局">
+          <button type="button" data-layout-option="1" aria-label="一列">1</button>
+          <button type="button" data-layout-option="2" aria-label="两列">2</button>
+          <button type="button" data-layout-option="3" aria-label="三列">3</button>
+        </div>
+        <button class="private-button private-button--small" type="button" data-refresh>
+          刷新
+        </button>
+        <button class="private-button private-button--small" type="button" data-select-mode>
+          选择
+        </button>
+      </div>
+    </div>
+
+    <form class="private-filter" data-filter role="search">
+      <label class="private-label" for="inbox-query" hidden>搜索碎片</label>
+      <input
+        class="private-input"
+        id="inbox-query"
+        name="query"
+        type="search"
+        placeholder="搜原文、随想、标题或来源…"
+        autocomplete="off"
+      />
+
+      <div class="private-date-picker" data-date-picker>
+        <button
+          class="private-input private-date-trigger"
+          type="button"
+          data-date-trigger
+          aria-expanded="false"
+        >
+          <span data-date-label>日期</span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+        <div class="private-date-popover" data-date-popover hidden>
+          <div class="private-date-modes" role="group" aria-label="日期模式">
+            <button type="button" data-date-mode="single">单日</button>
+            <button type="button" data-date-mode="range">范围</button>
+          </div>
+          <div class="private-date-calendar" data-date-single>
+            <calendar-date
+              locale="zh-CN"
+              first-day-of-week="1"
+              show-outside-days
+              data-calendar-single
+            >
+              <svg slot="previous" aria-label="上个月" viewBox="0 0 24 24">
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+              <svg slot="next" aria-label="下个月" viewBox="0 0 24 24">
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+              <calendar-month></calendar-month>
+            </calendar-date>
+          </div>
+          <div class="private-date-calendar" data-date-range hidden>
+            <calendar-range
+              months="2"
+              locale="zh-CN"
+              first-day-of-week="1"
+              show-outside-days
+              data-calendar-range
+            >
+              <svg slot="previous" aria-label="上个月" viewBox="0 0 24 24">
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+              <svg slot="next" aria-label="下个月" viewBox="0 0 24 24">
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+              <calendar-month></calendar-month>
+              <calendar-month offset="1" data-calendar-second></calendar-month>
+            </calendar-range>
+          </div>
+          <div class="private-date-presets">
+            <button type="button" data-date-preset="today">今天</button>
+            <button type="button" data-date-preset="7">近 7 天</button>
+            <button type="button" data-date-preset="30">近 30 天</button>
+          </div>
+          <div class="private-date-actions">
+            <button type="button" class="private-button private-button--small" data-date-clear>清除</button>
+            <button type="button" class="private-button private-button--small private-button--primary" data-date-apply>应用</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="private-button" type="submit">筛选</button>
+      <button class="private-button" type="button" data-clear-filters>清除</button>
+      <input type="hidden" name="from" data-filter-from />
+      <input type="hidden" name="to" data-filter-to />
+    </form>
+
+    <p class="private-status" data-status aria-live="polite"></p>
+    <div class="private-list" data-fragments aria-live="polite"></div>
+
+    <div class="private-selection" data-selection-bar hidden>
+      <span>已选 <strong data-selection-count>0</strong> 条碎片</span>
+      <div class="private-selection-actions">
+        <button class="private-button" type="button" data-select-all>全选</button>
+        <button class="private-button private-button--primary" type="button" data-synthesize>
+          合成文章
+        </button>
+        <button class="private-button" type="button" data-clear-selection>取消</button>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="compose-workbench" data-compose-dialog aria-label="合成工作台">
+    <div class="compose-shell">
+      <header class="compose-header">
+        <div>
+          <p class="private-eyebrow">Synthesis desk</p>
+          <h2 data-compose-title>合成工作台</h2>
+          <p class="compose-lead">把选中的碎片压成一篇有来源的文章。阶段由真实事件驱动。</p>
+        </div>
+        <div class="compose-header-meta">
+          <span class="compose-mode" data-compose-mode>准备中</span>
+          <button class="private-button private-button--small" type="button" data-compose-close>
+            关闭
+          </button>
+        </div>
+      </header>
+
+      <ol class="compose-stages" data-compose-stages aria-label="合成阶段">
+        <li data-stage="collect"><span>01</span><b>收集</b><small>碎片与去重</small></li>
+        <li data-stage="cluster"><span>02</span><b>聚类</b><small>找共同线索</small></li>
+        <li data-stage="outline"><span>03</span><b>大纲</b><small>排论证顺序</small></li>
+        <li data-stage="write"><span>04</span><b>成文</b><small>分节写正文</small></li>
+        <li data-stage="humanize"><span>05</span><b>润色</b><small>自然化处理</small></li>
+        <li data-stage="check"><span>06</span><b>校验</b><small>核对来源</small></li>
+      </ol>
+
+      <div class="compose-grid">
+        <section class="compose-pane compose-pane--sources">
+          <header class="compose-pane-head">
+            <div>
+              <p class="private-eyebrow">Source tray</p>
+              <h3>碎片 / 聚类</h3>
+            </div>
+            <span class="compose-meta" data-compose-count>0 条</span>
+          </header>
+          <div class="compose-clusters" data-compose-clusters>
+            <p class="compose-placeholder">正在把碎片铺开…</p>
+          </div>
+          <div class="compose-detail" data-compose-detail hidden></div>
+        </section>
+
+        <section class="compose-pane compose-pane--document">
+          <header class="compose-pane-head">
+            <div>
+              <p class="private-eyebrow">Draft</p>
+              <h3>大纲 / 正文</h3>
+            </div>
+            <span class="compose-meta" data-compose-word>0 字</span>
+          </header>
+          <ol class="compose-outline" data-compose-outline></ol>
+          <div class="compose-result" data-compose-result hidden>
+            <h4 data-compose-result-title></h4>
+            <div class="compose-citations" data-compose-citations></div>
+            <div class="compose-warnings" data-compose-warnings hidden></div>
+          </div>
+          <pre class="compose-preview" data-compose-preview>等待开始…</pre>
+        </section>
+      </div>
+
+      <footer class="compose-footer">
+        <p class="compose-status" data-compose-status aria-live="polite">准备开始…</p>
+        <div class="compose-actions">
+          <button class="private-button private-button--small" type="button" data-compose-cancel>
+            取消合成
+          </button>
+          <a
+            class="private-button private-button--small"
+            data-compose-draft-link
+            href="/drafts"
+            hidden
+          >
+            打开草稿
+          </a>
+          <button class="private-button private-button--small" type="button" data-compose-retry hidden>
+            重试
+          </button>
+          <button
+            class="private-button private-button--small private-button--primary"
+            type="button"
+            data-compose-save
+            disabled
+          >
+            保存草稿
+          </button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="image-viewer" data-image-viewer aria-label="查看图片">
+    <div class="image-viewer__shell">
+      <header class="image-viewer__head">
+        <p class="private-eyebrow">Image fragment</p>
+        <button class="image-viewer__close" type="button" data-image-viewer-close aria-label="关闭图片">
+          关闭
+        </button>
+      </header>
+      <div class="image-viewer__stage">
+        <img data-image-viewer-img alt="" decoding="async" />
+      </div>
+      <footer class="image-viewer__foot">
+        <p data-image-viewer-caption></p>
+        <a
+          data-image-viewer-origin
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          打开原图
+        </a>
+      </footer>
+    </div>
+  </dialog>
+</PortalLayout>
+
+<script>
+  import 'cally';
+
+  interface LinkPreview {
+    title: string;
+    description: string;
+    image: string;
+    siteName: string;
+    author: string;
+    publishedAt?: string;
+    articleUrl?: string;
+    provider: 'x' | 'douyin' | 'zhihu' | 'generic';
+  }
+
+  interface ImageMetadata {
+    src: string;
+    pageUrl?: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+  }
+
+  interface Fragment {
+    id: string;
+    kind: string;
+    groupId: string | null;
+    quote: string;
+    note: string;
+    sourceUrl: string;
+    sourceTitle: string;
+    sourceSite: string;
+    capturedAt: string;
+    tags: string[];
+    metadata?: { preview?: LinkPreview; image?: ImageMetadata };
+  }
+
+  interface ComposeCluster {
+    id: string;
+    title: string;
+    summary: string;
+    fragmentIds: string[];
+  }
+
+  interface ComposeOutlineSection {
+    heading: string;
+    clusterId: string;
+    intent: string;
+  }
+
+  interface ComposePlan {
+    title: string;
+    clusters: ComposeCluster[];
+    outline: ComposeOutlineSection[];
+    mode: 'ai' | 'structure';
+    warnings?: string[];
+  }
+
+  interface ComposeCitation {
+    token: string;
+    fragmentId: string;
+    title: string;
+    url: string;
+    quote: string;
+  }
+
+  type ComposeRunState = 'idle' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+  type CallyCalendarElement = HTMLElement & { value: string };
+
+  interface FragmentsResponse {
+    ok?: boolean;
+    data?: {
+      fragments?: Fragment[];
+      total?: number;
+      tags?: Array<{ tag: string; count: number }>;
+    };
+    error?: { message?: string };
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-inbox]');
+  const form = root?.querySelector<HTMLFormElement>('[data-filter]');
+  const input = root?.querySelector<HTMLInputElement>('input[name="query"]');
+  const fromInput = root?.querySelector<HTMLInputElement>('[data-filter-from]');
+  const toInput = root?.querySelector<HTMLInputElement>('[data-filter-to]');
+  const clearFilters = root?.querySelector<HTMLButtonElement>('[data-clear-filters]');
+  const tagChips = root?.querySelector<HTMLElement>('[data-tag-chips]');
+  const sortButton = root?.querySelector<HTMLButtonElement>('[data-sort]');
+  const refreshButton = root?.querySelector<HTMLButtonElement>('[data-refresh]');
+  const layoutButtons = root?.querySelectorAll<HTMLButtonElement>('[data-layout-option]') ?? [];
+  const selectModeButton = root?.querySelector<HTMLButtonElement>('[data-select-mode]');
+  const selectAllButton = root?.querySelector<HTMLButtonElement>('[data-select-all]');
+  const datePicker = root?.querySelector<HTMLElement>('[data-date-picker]');
+  const dateTrigger = root?.querySelector<HTMLButtonElement>('[data-date-trigger]');
+  const datePopover = root?.querySelector<HTMLElement>('[data-date-popover]');
+  const dateLabel = root?.querySelector<HTMLElement>('[data-date-label]');
+  const dateModeButtons = root?.querySelectorAll<HTMLButtonElement>('[data-date-mode]') ?? [];
+  const dateSingleWrap = root?.querySelector<HTMLElement>('[data-date-single]');
+  const dateRangeWrap = root?.querySelector<HTMLElement>('[data-date-range]');
+  const singleCalendar = root?.querySelector<CallyCalendarElement>('[data-calendar-single]');
+  const rangeCalendar = root?.querySelector<CallyCalendarElement>('[data-calendar-range]');
+  const rangeSecondMonth = root?.querySelector<HTMLElement>('[data-calendar-second]');
+  const datePresetButtons = root?.querySelectorAll<HTMLButtonElement>('[data-date-preset]') ?? [];
+  const dateApplyButton = root?.querySelector<HTMLButtonElement>('[data-date-apply]');
+  const dateClearButton = root?.querySelector<HTMLButtonElement>('[data-date-clear]');
+  const linkForm = root?.querySelector<HTMLFormElement>('[data-link-form]');
+  const linkUrl = root?.querySelector<HTMLInputElement>('[data-link-form] input[name="url"]');
+  const linkNote = root?.querySelector<HTMLInputElement>('[data-link-form] input[name="note"]');
+  const list = root?.querySelector<HTMLElement>('[data-fragments]');
+  const status = root?.querySelector<HTMLElement>('[data-status]');
+  const logout = document.querySelector<HTMLButtonElement>('[data-logout]');
+  const selectionBar = root?.querySelector<HTMLElement>('[data-selection-bar]');
+  const selectionCount = root?.querySelector<HTMLElement>('[data-selection-count]');
+  const clearSelectionButton = root?.querySelector<HTMLButtonElement>('[data-clear-selection]');
+  const synthesizeButton = root?.querySelector<HTMLButtonElement>('[data-synthesize]');
+  const composeDialog = document.querySelector<HTMLDialogElement>('[data-compose-dialog]')!;
+  const composeTitle = document.querySelector<HTMLElement>('[data-compose-title]')!;
+  const composeMode = document.querySelector<HTMLElement>('[data-compose-mode]')!;
+  const composeCount = document.querySelector<HTMLElement>('[data-compose-count]')!;
+  const composeClusters = document.querySelector<HTMLElement>('[data-compose-clusters]')!;
+  const composeDetail = document.querySelector<HTMLElement>('[data-compose-detail]')!;
+  const composeOutline = document.querySelector<HTMLElement>('[data-compose-outline]')!;
+  const composePreview = document.querySelector<HTMLElement>('[data-compose-preview]')!;
+  const composeWord = document.querySelector<HTMLElement>('[data-compose-word]')!;
+  const composeResult = document.querySelector<HTMLElement>('[data-compose-result]')!;
+  const composeResultTitle = document.querySelector<HTMLElement>('[data-compose-result-title]')!;
+  const composeCitations = document.querySelector<HTMLElement>('[data-compose-citations]')!;
+  const composeWarningsNode = document.querySelector<HTMLElement>('[data-compose-warnings]')!;
+  const composeStatusNode = document.querySelector<HTMLElement>('[data-compose-status]')!;
+  const composeCancelButton = document.querySelector<HTMLButtonElement>('[data-compose-cancel]')!;
+  const composeRetryButton = document.querySelector<HTMLButtonElement>('[data-compose-retry]')!;
+  const composeSaveButton = document.querySelector<HTMLButtonElement>('[data-compose-save]')!;
+  const composeDraftLink = document.querySelector<HTMLAnchorElement>('[data-compose-draft-link]')!;
+  const composeCloseButtons = document.querySelectorAll<HTMLButtonElement>('[data-compose-close]');
+  const composeStageItems = document.querySelectorAll<HTMLElement>('[data-compose-stages] [data-stage]');
+  const imageViewer = document.querySelector<HTMLDialogElement>('[data-image-viewer]')!;
+  const imageViewerImage = document.querySelector<HTMLImageElement>('[data-image-viewer-img]')!;
+  const imageViewerCaption = document.querySelector<HTMLElement>('[data-image-viewer-caption]')!;
+  const imageViewerOrigin = document.querySelector<HTMLAnchorElement>('[data-image-viewer-origin]')!;
+  const imageViewerClose = document.querySelector<HTMLButtonElement>('[data-image-viewer-close]')!;
+
+  const selectedIds = new Set<string>();
+  const fragmentCache = new Map<string, Fragment>();
+  let activeTag = '';
+  let sortOrder: 'desc' | 'asc' = 'desc';
+  let dateMode: 'single' | 'range' = 'single';
+  let selecting = false;
+  let lastSelectedId = '';
+  let suppressCardClick = false;
+  let marquee: HTMLDivElement | null = null;
+  let dragBase = new Set<string>();
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragMoved = false;
+  let renderedCards: HTMLElement[] = [];
+  let lastMasonryColumns = 0;
+  let lastAutoRefreshAt = 0;
+  let autoRefreshTimer = 0;
+  let composeRunId = '';
+  let composeRunState: ComposeRunState = 'idle';
+  let composeSource: EventSource | null = null;
+  let composePlan: ComposePlan | null = null;
+  let composeFragments: Fragment[] = [];
+  let composeSections = new Map<number, string>();
+  let composeMarkdown = '';
+  let composeWarnings: string[] = [];
+
+  const dateFormat = new Intl.DateTimeFormat('zh-CN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const shortDateFormat = new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  function previewDate(value?: string): string {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : shortDateFormat.format(date);
+  }
+
+  let textTooltip: HTMLDivElement | null = null;
+
+  function tooltipNode(): HTMLDivElement {
+    if (textTooltip) return textTooltip;
+    const node = document.createElement('div');
+    node.className = 'text-tooltip';
+    node.hidden = true;
+    node.setAttribute('role', 'tooltip');
+    document.body.append(node);
+    textTooltip = node;
+    return node;
+  }
+
+  function hideTextTooltip(): void {
+    if (textTooltip) textTooltip.hidden = true;
+  }
+
+  function showTextTooltip(anchor: HTMLElement, text: string): void {
+    const node = tooltipNode();
+    node.textContent = text;
+    node.hidden = false;
+
+    const margin = 12;
+    const rect = anchor.getBoundingClientRect();
+    const width = Math.min(560, window.innerWidth - margin * 2);
+    node.style.width = `${width}px`;
+    node.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))}px`;
+
+    let top = rect.bottom + 8;
+    const height = node.offsetHeight;
+    if (top + height > window.innerHeight - margin) {
+      // Keep the panel over the card, not over the search form above it.
+      top = Math.max(margin, Math.min(rect.top, window.innerHeight - height - margin));
+    }
+    node.style.top = `${top}px`;
+  }
+
+  function isTextOverflowing(element: HTMLElement): boolean {
+    return (
+      element.scrollHeight > element.clientHeight + 1 ||
+      element.scrollWidth > element.clientWidth + 1
+    );
+  }
+
+  function attachTextTooltip(element: HTMLElement, text: string): void {
+    element.addEventListener('mouseenter', () => {
+      if (isTextOverflowing(element)) showTextTooltip(element, text);
+    });
+    element.addEventListener('mouseleave', hideTextTooltip);
+  }
+
+  window.addEventListener('scroll', hideTextTooltip, true);
+  window.addEventListener('resize', hideTextTooltip);
+
+  function fragmentLabel(fragment: Fragment): string {
+    const preview = fragment.metadata?.preview;
+    return preview?.title || fragment.sourceTitle || fragment.quote.slice(0, 90) || '未命名碎片';
+  }
+
+  function updateSelectionBar(): void {
+    const hasSelection = selectedIds.size > 0;
+    if (selectionBar) selectionBar.hidden = !hasSelection;
+    if (selectionCount) selectionCount.textContent = String(selectedIds.size);
+    if (synthesizeButton) synthesizeButton.disabled = !hasSelection;
+    if (selectAllButton) selectAllButton.disabled = fragmentCache.size === 0;
+  }
+
+  function syncSelectionUI(): void {
+    for (const box of root?.querySelectorAll<HTMLInputElement>('[data-fragment-select]') ?? []) {
+      const selected = selectedIds.has(box.dataset.fragmentSelect ?? '');
+      box.checked = selected;
+      box.closest('.fragment-card')?.classList.toggle('is-selected', selected);
+    }
+    updateSelectionBar();
+  }
+
+  function clearSelection(): void {
+    selectedIds.clear();
+    lastSelectedId = '';
+    syncSelectionUI();
+  }
+
+  function toggleSelection(id: string): void {
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+    lastSelectedId = id;
+    syncSelectionUI();
+  }
+
+  function setSelecting(value: boolean): void {
+    selecting = value;
+    root?.classList.toggle('is-selecting', value);
+    if (selectModeButton) {
+      selectModeButton.textContent = value ? '完成' : '选择';
+      selectModeButton.setAttribute('aria-pressed', String(value));
+    }
+    if (!value) clearSelection();
+    else updateSelectionBar();
+  }
+
+  function selectRange(fromId: string, toId: string): void {
+    const ids = [...fragmentCache.keys()];
+    const from = ids.indexOf(fromId);
+    const to = ids.indexOf(toId);
+    if (from === -1 || to === -1) {
+      toggleSelection(toId);
+      return;
+    }
+    const [start, end] = from < to ? [from, to] : [to, from];
+    for (const id of ids.slice(start, end + 1)) selectedIds.add(id);
+    syncSelectionUI();
+  }
+
+  function selectAllVisible(): void {
+    for (const id of fragmentCache.keys()) selectedIds.add(id);
+    syncSelectionUI();
+  }
+
+  function attachCardSelection(card: HTMLElement, fragment: Fragment): void {
+    card.addEventListener('click', (event) => {
+      if (!selecting || suppressCardClick) return;
+      const target = event.target as HTMLElement;
+      if (target.closest('button, input, textarea, select, label, form')) return;
+      event.preventDefault();
+      if (event.shiftKey && lastSelectedId) selectRange(lastSelectedId, fragment.id);
+      else toggleSelection(fragment.id);
+      lastSelectedId = fragment.id;
+    });
+  }
+
+  function finishMarquee(): void {
+    marquee?.remove();
+    marquee = null;
+    dragBase = new Set();
+  }
+
+  function startMarquee(event: PointerEvent): void {
+    if (!selecting || event.button !== 0 || event.pointerType === 'touch') return;
+    const target = event.target as HTMLElement;
+    if (target.closest('button, input, textarea, select, label, form')) return;
+
+    dragBase = event.shiftKey ? new Set(selectedIds) : new Set();
+    if (!event.shiftKey) {
+      selectedIds.clear();
+      syncSelectionUI();
+    }
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    dragMoved = false;
+    marquee = document.createElement('div');
+    marquee.className = 'selection-marquee';
+    marquee.hidden = true;
+    document.body.append(marquee);
+
+    const onMove = (moveEvent: PointerEvent): void => {
+      const dx = moveEvent.clientX - dragStartX;
+      const dy = moveEvent.clientY - dragStartY;
+      if (!dragMoved && Math.hypot(dx, dy) < 4) return;
+      dragMoved = true;
+      if (!marquee) return;
+
+      const left = Math.min(dragStartX, moveEvent.clientX);
+      const top = Math.min(dragStartY, moveEvent.clientY);
+      const width = Math.abs(dx);
+      const height = Math.abs(dy);
+      marquee.hidden = false;
+      marquee.style.left = `${left}px`;
+      marquee.style.top = `${top}px`;
+      marquee.style.width = `${width}px`;
+      marquee.style.height = `${height}px`;
+
+      const next = new Set(dragBase);
+      for (const card of list?.querySelectorAll<HTMLElement>('.fragment-card') ?? []) {
+        const rect = card.getBoundingClientRect();
+        if (
+          rect.left < left + width &&
+          rect.right > left &&
+          rect.top < top + height &&
+          rect.bottom > top
+        ) {
+          const id = card.dataset.fragmentId;
+          if (id) next.add(id);
+        }
+      }
+      selectedIds.clear();
+      for (const id of next) selectedIds.add(id);
+      syncSelectionUI();
+    };
+
+    const onUp = (): void => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      finishMarquee();
+      if (dragMoved) {
+        suppressCardClick = true;
+        window.setTimeout(() => {
+          suppressCardClick = false;
+        }, 0);
+      }
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  }
+
+  list?.addEventListener('pointerdown', startMarquee);
+
+  function selectionControl(card: HTMLElement, fragment: Fragment): HTMLLabelElement {
+    const label = document.createElement('label');
+    label.className = 'fragment-select';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.dataset.fragmentSelect = fragment.id;
+    box.checked = selectedIds.has(fragment.id);
+    box.setAttribute('aria-label', `选择：${fragmentLabel(fragment)}`);
+    box.addEventListener('change', () => {
+      if (box.checked) selectedIds.add(fragment.id);
+      else selectedIds.delete(fragment.id);
+      lastSelectedId = fragment.id;
+      card.classList.toggle('is-selected', box.checked);
+      updateSelectionBar();
+    });
+    const text = document.createElement('span');
+    text.textContent = '选择';
+    label.append(box, text);
+    return label;
+  }
+
+  const DELETE_HOLD_MS = 1_000;
+
+  function roundedRectPath(
+    width: number,
+    height: number,
+    radii: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number },
+  ): string {
+    const x = 0.5;
+    const y = 0.5;
+    const right = Math.max(x, width - 0.5);
+    const bottom = Math.max(y, height - 0.5);
+    const limit = Math.min(width, height) / 2;
+    const tl = Math.min(Math.max(0, radii.topLeft), limit);
+    const tr = Math.min(Math.max(0, radii.topRight), limit);
+    const br = Math.min(Math.max(0, radii.bottomRight), limit);
+    const bl = Math.min(Math.max(0, radii.bottomLeft), limit);
+
+    // Start at the bottom-right and travel clockwise. The dash animation then
+    // grows the red outline from the delete control around the whole card.
+    return [
+      `M ${right - br} ${bottom}`,
+      `H ${x + bl}`,
+      `A ${bl} ${bl} 0 0 1 ${x} ${bottom - bl}`,
+      `V ${y + tl}`,
+      `A ${tl} ${tl} 0 0 1 ${x + tl} ${y}`,
+      `H ${right - tr}`,
+      `A ${tr} ${tr} 0 0 1 ${right} ${y + tr}`,
+      `V ${bottom - br}`,
+      `A ${br} ${br} 0 0 1 ${right - br} ${bottom}`,
+      'Z',
+    ].join(' ');
+  }
+
+  function createDeleteControl(fragment: Fragment, card: HTMLElement): HTMLElement {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'delete-hold';
+
+    const remove = document.createElement('button');
+    remove.className = 'fragment-action fragment-action--danger delete-hold__button';
+    remove.type = 'button';
+    remove.textContent = '删除';
+    remove.title = '按住 1 秒删除';
+    remove.setAttribute('aria-label', '按住 1 秒删除');
+
+    const svgNs = 'http://www.w3.org/2000/svg';
+    let outline: SVGSVGElement | null = null;
+    let outlinePath: SVGPathElement | null = null;
+    let outlineLength = 0;
+
+    function buildOutline(): void {
+      if (!outline || !outlinePath) {
+        outline = document.createElementNS(svgNs, 'svg');
+        outline.classList.add('delete-outline');
+        outline.setAttribute('aria-hidden', 'true');
+        outlinePath = document.createElementNS(svgNs, 'path');
+        outlinePath.classList.add('delete-outline__path');
+        outline.append(outlinePath);
+      }
+
+      const width = card.clientWidth;
+      const height = card.clientHeight;
+      if (!width || !height) return;
+
+      const style = window.getComputedStyle(card);
+      const radii = {
+        topLeft: parseFloat(style.borderTopLeftRadius) || 0,
+        topRight: parseFloat(style.borderTopRightRadius) || 0,
+        bottomRight: parseFloat(style.borderBottomRightRadius) || 0,
+        bottomLeft: parseFloat(style.borderBottomLeftRadius) || 0,
+      };
+      const d = roundedRectPath(width, height, radii);
+      outline.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      outline.setAttribute('width', String(width));
+      outline.setAttribute('height', String(height));
+      outlinePath.setAttribute('d', d);
+      outlineLength = outlinePath.getTotalLength();
+      outlinePath.style.strokeDasharray = `${outlineLength} ${outlineLength}`;
+      outlinePath.style.strokeDashoffset = String(outlineLength);
+
+      if (!outline.parentElement) card.append(outline);
+    }
+
+    let frame = 0;
+    let startedAt = 0;
+    let holding = false;
+    let completed = false;
+
+    function setProgress(value: number): void {
+      if (!outlinePath || outlineLength <= 0) return;
+      const clamped = Math.max(0, Math.min(1, value));
+      outlinePath.style.strokeDashoffset = String(outlineLength * (1 - clamped));
+    }
+
+    function reset(): void {
+      window.cancelAnimationFrame(frame);
+      holding = false;
+      completed = false;
+      wrapper.classList.remove('is-holding', 'is-completing');
+      card.classList.remove('is-deleting');
+      remove.disabled = false;
+      setProgress(0);
+    }
+
+    function tick(now: number): void {
+      if (!holding) return;
+      const progress = Math.min(1, (now - startedAt) / DELETE_HOLD_MS);
+      setProgress(progress);
+      if (progress >= 1) {
+        holding = false;
+        completed = true;
+        window.cancelAnimationFrame(frame);
+        wrapper.classList.remove('is-holding');
+        wrapper.classList.add('is-completing');
+        setProgress(1);
+        remove.disabled = true;
+        // Let the closed loop register for a beat before the paper burns.
+        window.setTimeout(() => {
+          if (completed) void deleteFragment(fragment.id, remove, reset);
+        }, 90);
+        return;
+      }
+      frame = window.requestAnimationFrame(tick);
+    }
+
+    function start(event?: Event): void {
+      if (completed || holding) return;
+      event?.preventDefault();
+      buildOutline();
+      holding = true;
+      startedAt = performance.now();
+      card.classList.add('is-deleting');
+      wrapper.classList.add('is-holding');
+      setProgress(0);
+      if (event instanceof PointerEvent) {
+        try {
+          remove.setPointerCapture(event.pointerId);
+        } catch {
+          /* pointer capture is best effort */
+        }
+      }
+      frame = window.requestAnimationFrame(tick);
+    }
+
+    function cancel(): void {
+      if (!holding) return;
+      holding = false;
+      window.cancelAnimationFrame(frame);
+      wrapper.classList.remove('is-holding');
+      card.classList.remove('is-deleting');
+      window.setTimeout(() => {
+        if (!holding && !completed) setProgress(0);
+      }, 140);
+    }
+
+    remove.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      start(event);
+    });
+    remove.addEventListener('pointerup', cancel);
+    remove.addEventListener('pointercancel', cancel);
+    remove.addEventListener('keydown', (event) => {
+      if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) start(event);
+    });
+    remove.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') cancel();
+    });
+    remove.addEventListener('click', (event) => event.preventDefault());
+    remove.addEventListener('contextmenu', (event) => event.preventDefault());
+
+    wrapper.append(remove);
+    return wrapper;
+  }
+
+  function renderActions(card: HTMLElement, fragment: Fragment): HTMLElement {
+    const actions = document.createElement('div');
+    actions.className = 'fragment-actions';
+    actions.append(selectionControl(card, fragment));
+
+    const buttons = document.createElement('div');
+    buttons.className = 'fragment-action-buttons';
+
+    const edit = document.createElement('button');
+    edit.className = 'fragment-action';
+    edit.type = 'button';
+    edit.textContent = '编辑';
+    edit.addEventListener('click', () => startEdit(fragment, card));
+
+    buttons.append(edit, createDeleteControl(fragment, card));
+    actions.append(buttons);
+    return actions;
+  }
+
+  function startEdit(fragment: Fragment, card: HTMLElement): void {
+    if (card.querySelector('[data-edit-form]')) return;
+    card.classList.add('is-editing');
+
+    const editForm = document.createElement('form');
+    editForm.className = 'fragment-edit';
+    editForm.dataset.editForm = '';
+
+    const noteLabel = document.createElement('label');
+    noteLabel.className = 'private-edit-field';
+    const noteCaption = document.createElement('span');
+    noteCaption.textContent = '随想';
+    const noteInput = document.createElement('textarea');
+    noteInput.className = 'private-input private-textarea';
+    noteInput.name = 'note';
+    noteInput.maxLength = 5000;
+    noteInput.placeholder = '补一句随想，或者暂时留空';
+    noteInput.value = fragment.note;
+    noteLabel.append(noteCaption, noteInput);
+
+    const tagsLabel = document.createElement('label');
+    tagsLabel.className = 'private-edit-field';
+    const tagsCaption = document.createElement('span');
+    tagsCaption.textContent = '标签';
+    const tagsInput = document.createElement('input');
+    tagsInput.className = 'private-input';
+    tagsInput.name = 'tags';
+    tagsInput.type = 'text';
+    tagsInput.placeholder = '用逗号分隔，例如：写作, AI, 待读';
+    tagsInput.value = fragment.tags.join(', ');
+    tagsLabel.append(tagsCaption, tagsInput);
+
+    const actions = document.createElement('div');
+    actions.className = 'private-edit-actions';
+    const save = document.createElement('button');
+    save.className = 'private-button private-button--primary';
+    save.type = 'submit';
+    save.textContent = '保存';
+    const cancel = document.createElement('button');
+    cancel.className = 'private-button';
+    cancel.type = 'button';
+    cancel.textContent = '取消';
+    cancel.addEventListener('click', () => {
+      editForm.remove();
+      card.classList.remove('is-editing');
+    });
+    actions.append(save, cancel);
+
+    editForm.append(noteLabel, tagsLabel, actions);
+    editForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      save.disabled = true;
+      try {
+        const tags = tagsInput.value
+          .split(/[,，]+/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+        const response = await fetch(`/api/fragments/${encodeURIComponent(fragment.id)}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ note: noteInput.value, tags }),
+        });
+        if (response.status === 401) {
+          window.location.assign('/login?next=/inbox');
+          return;
+        }
+        const data = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: { message?: string };
+        };
+        if (!response.ok || !data.ok) throw new Error(data.error?.message || '保存失败');
+        await load();
+      } catch (error) {
+        save.disabled = false;
+        if (status) status.textContent = error instanceof Error ? error.message : '保存失败。';
+      }
+    });
+
+    card.append(editForm);
+    noteInput.focus();
+  }
+
+  function renderTagChips(tags: Array<{ tag: string; count: number }>, selected = activeTag): void {
+    if (!tagChips) return;
+    tagChips.replaceChildren();
+
+    const addChip = (label: string, value: string, count?: number): void => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'private-chip';
+      button.dataset.tag = value;
+      button.setAttribute('aria-pressed', String(value === selected));
+      button.classList.toggle('is-active', value === selected);
+      button.append(document.createTextNode(label));
+      if (count !== undefined) {
+        const badge = document.createElement('span');
+        badge.textContent = String(count);
+        button.append(badge);
+      }
+      button.addEventListener('click', () => {
+        activeTag = value;
+        void load();
+      });
+      tagChips.append(button);
+    };
+
+    addChip('全部', '');
+    for (const item of tags) addChip(item.tag, item.tag, item.count);
+    if (selected && !tags.some((item) => item.tag === selected)) {
+      addChip(selected, selected);
+    }
+  }
+
+  function formatDateInput(value: string): string {
+    if (!value) return '';
+    const [year, month, day] = value.split('-');
+    return year && month && day ? `${year}.${month}.${day}` : value;
+  }
+
+  function inputDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function todayInput(): string {
+    return inputDate(new Date());
+  }
+
+  function setCalendarValue(
+    calendar: CallyCalendarElement | null | undefined,
+    value: string,
+  ): void {
+    if (!calendar) return;
+    calendar.value = value;
+    const focus = value.split('/')[0] || todayInput();
+    calendar.setAttribute('focused-date', focus);
+  }
+
+  function syncCalendarMonths(): void {
+    const narrow = window.matchMedia('(max-width: 760px)').matches;
+    if (rangeCalendar) rangeCalendar.setAttribute('months', narrow ? '1' : '2');
+    if (rangeSecondMonth) rangeSecondMonth.hidden = narrow;
+    datePopover?.classList.toggle('is-narrow', narrow);
+  }
+
+  function updateDateLabel(): void {
+    if (!dateLabel) return;
+    const from = fromInput?.value ?? '';
+    const to = toInput?.value ?? '';
+    if (!from && !to) dateLabel.textContent = '日期';
+    else if (from && to && from === to) dateLabel.textContent = formatDateInput(from);
+    else dateLabel.textContent = `${from ? formatDateInput(from) : '…'} – ${to ? formatDateInput(to) : '…'}`;
+  }
+
+  function syncDateControls(): void {
+    const from = fromInput?.value ?? '';
+    const to = toInput?.value ?? '';
+    setCalendarValue(singleCalendar, from || to);
+    setCalendarValue(rangeCalendar, from && to ? `${from}/${to}` : '');
+  }
+
+  function setDateMode(mode: 'single' | 'range'): void {
+    dateMode = mode;
+    for (const button of dateModeButtons) {
+      const active = button.dataset.dateMode === mode;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+    if (dateSingleWrap) dateSingleWrap.hidden = mode !== 'single';
+    if (dateRangeWrap) dateRangeWrap.hidden = mode !== 'range';
+    datePopover?.classList.toggle('is-range', mode === 'range');
+    if (dateApplyButton) dateApplyButton.disabled = false;
+    syncCalendarMonths();
+    syncDateControls();
+  }
+
+  function openDatePicker(): void {
+    if (!datePopover || !dateTrigger) return;
+    const from = fromInput?.value ?? '';
+    const to = toInput?.value ?? '';
+    setDateMode(from && to && from !== to ? 'range' : 'single');
+    datePopover.hidden = false;
+    datePopover.classList.remove('opens-up');
+    const triggerRect = dateTrigger.getBoundingClientRect();
+    if (
+      triggerRect.bottom + 8 + datePopover.offsetHeight >
+      window.innerHeight - 12
+    ) {
+      datePopover.classList.add('opens-up');
+    }
+    dateTrigger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDatePicker(): void {
+    if (!datePopover || !dateTrigger) return;
+    datePopover.hidden = true;
+    dateTrigger.setAttribute('aria-expanded', 'false');
+    if (dateApplyButton) dateApplyButton.disabled = false;
+  }
+
+  function commitDateInputs(): void {
+    if (dateMode === 'single') {
+      const value = singleCalendar?.value ?? '';
+      if (fromInput) fromInput.value = value;
+      if (toInput) toInput.value = value;
+    } else {
+      const [rawFrom, rawTo] = (rangeCalendar?.value ?? '').split('/');
+      let from = rawFrom ?? '';
+      let to = rawTo ?? '';
+      if (from && !to) to = from;
+      if (from && to && from > to) [from, to] = [to, from];
+      if (fromInput) fromInput.value = from;
+      if (toInput) toInput.value = to;
+    }
+    updateDateLabel();
+  }
+
+  function applyDatePicker(): void {
+    commitDateInputs();
+    closeDatePicker();
+    void load();
+  }
+
+  function resetDateFilter(): void {
+    if (fromInput) fromInput.value = '';
+    if (toInput) toInput.value = '';
+    setCalendarValue(singleCalendar, '');
+    setCalendarValue(rangeCalendar, '');
+    updateDateLabel();
+  }
+
+  function clearDatePicker(): void {
+    resetDateFilter();
+    closeDatePicker();
+    void load();
+  }
+
+  function presetDate(days: number): void {
+    const today = new Date();
+    const end = inputDate(today);
+    if (days === 0) {
+      setDateMode('single');
+      setCalendarValue(singleCalendar, end);
+    } else {
+      const start = new Date(today);
+      start.setDate(start.getDate() - days + 1);
+      setDateMode('range');
+      setCalendarValue(rangeCalendar, `${inputDate(start)}/${end}`);
+    }
+    applyDatePicker();
+  }
+
+  function autoRefreshIfStale(): void {
+    if (document.visibilityState !== 'visible') return;
+    if (selecting || root?.querySelector('[data-edit-form], .is-burning, .delete-hold.is-holding, .delete-hold.is-completing')) {
+      return;
+    }
+    if (Date.now() - lastAutoRefreshAt < 1_500) return;
+    lastAutoRefreshAt = Date.now();
+    window.clearTimeout(autoRefreshTimer);
+    autoRefreshTimer = window.setTimeout(() => {
+      void load({ preserveScroll: true });
+    }, 120);
+  }
+
+  function prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function captureCardRects(cards: HTMLElement[]): Map<string, DOMRect> {
+    const rects = new Map<string, DOMRect>();
+    for (const card of cards) {
+      const id = card.dataset.fragmentId;
+      if (id) rects.set(id, card.getBoundingClientRect());
+    }
+    return rects;
+  }
+
+  function masonryColumnCount(): number {
+    const layout = Number(root?.dataset.layout ?? 2);
+    const preferred = Number.isFinite(layout) ? Math.min(3, Math.max(1, layout)) : 2;
+    return window.matchMedia('(max-width: 680px)').matches ? 1 : preferred;
+  }
+
+  /**
+   * Shortest-column masonry: a very tall card must not force the card beside it
+   * to stretch, and later cards fill the shorter column instead of leaving a
+   * large hole under it. Cards keep their natural height.
+   */
+  function layoutCards(
+    cards: HTMLElement[],
+    options: { animate?: boolean; oldRects?: Map<string, DOMRect> } = {},
+  ): void {
+    if (!list || cards.length === 0) return;
+    const count = masonryColumnCount();
+    const oldRects =
+      options.oldRects ??
+      (options.animate && !prefersReducedMotion()
+        ? captureCardRects(cards)
+        : new Map<string, DOMRect>());
+    const columns: HTMLElement[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const column = document.createElement('div');
+      column.className = 'private-column';
+      columns.push(column);
+    }
+    list.replaceChildren(...columns);
+
+    for (const card of cards) {
+      let shortest = columns[0];
+      for (const column of columns) {
+        if (column.offsetHeight < shortest.offsetHeight) shortest = column;
+      }
+      shortest.append(card);
+    }
+    lastMasonryColumns = count;
+
+    if (oldRects.size === 0 || prefersReducedMotion()) return;
+
+    // Force the new column widths before measuring the destination positions.
+    void list.offsetWidth;
+    for (const card of cards) {
+      const id = card.dataset.fragmentId;
+      const before = id ? oldRects.get(id) : undefined;
+      if (!before) continue;
+      const after = card.getBoundingClientRect();
+      const dx = before.left - after.left;
+      const dy = before.top - after.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      card.animate(
+        [
+          { translate: `${dx}px ${dy}px` },
+          { translate: '0px 0px' },
+        ] as Keyframe[],
+        { duration: 280, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' },
+      );
+    }
+  }
+
+  function syncMasonryColumns(): void {
+    const next = masonryColumnCount();
+    if (next === lastMasonryColumns || renderedCards.length === 0) return;
+    layoutCards(renderedCards);
+  }
+
+  function applyLayout(value: string, persist = true, animate = false): void {
+    const layout = ['1', '2', '3'].includes(value) ? value : '2';
+    const oldRects =
+      animate && renderedCards.length > 0 ? captureCardRects(renderedCards) : undefined;
+    root?.setAttribute('data-layout', layout);
+    for (const button of layoutButtons) {
+      const active = button.dataset.layoutOption === layout;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+    if (persist) localStorage.setItem('josh-inbox-layout', layout);
+    if (animate && renderedCards.length > 0) {
+      layoutCards(renderedCards, { animate: true, oldRects });
+    }
+  }
+
+  function applySortLabel(): void {
+    if (!sortButton) return;
+    sortButton.textContent = sortOrder === 'desc' ? '最新优先' : '最早优先';
+    sortButton.setAttribute('aria-pressed', String(sortOrder === 'asc'));
+  }
+
+  function composeStatus(text: string): void {
+    if (composeStatusNode) composeStatusNode.textContent = text;
+  }
+
+  function composeSetMode(text: string): void {
+    composeMode.textContent = text;
+  }
+
+  function resetComposeStages(): void {
+    for (const item of composeStageItems) {
+      item.classList.remove('is-active', 'is-done', 'is-skipped', 'is-cancelled');
+      const small = item.querySelector('small');
+      if (small) small.textContent = '';
+    }
+  }
+
+  function setComposeStage(
+    stage: string,
+    status: 'start' | 'done' | 'skipped',
+    detail = '',
+  ): void {
+    const items = [...composeStageItems];
+    const index = items.findIndex((item) => item.dataset.stage === stage);
+    if (index < 0) return;
+    for (const [i, item] of items.entries()) {
+      if (i < index) {
+        item.classList.remove('is-active');
+        item.classList.add('is-done');
+      }
+    }
+    const current = items[index];
+    const small = current.querySelector('small');
+    if (small && detail) small.textContent = detail;
+    if (status === 'start') {
+      current.classList.add('is-active');
+      current.classList.remove('is-done', 'is-skipped', 'is-cancelled');
+    } else {
+      current.classList.remove('is-active');
+      current.classList.add('is-done');
+      if (status === 'skipped') current.classList.add('is-skipped');
+    }
+  }
+
+  function composeResetView(): void {
+    composePlan = null;
+    composeSections = new Map();
+    composeMarkdown = '';
+    composeWarnings = [];
+    composeTitle.textContent = '合成工作台';
+    composeMode.textContent = '准备中';
+    composeCount.textContent = '0 条';
+    composeWord.textContent = '0 字';
+    composePreview.textContent = '正在创建合成任务…';
+    composeOutline.replaceChildren();
+    composeClusters.replaceChildren();
+    composeDetail.hidden = true;
+    composeDetail.replaceChildren();
+    composeResult.hidden = true;
+    composeCitations.replaceChildren();
+    composeWarningsNode.hidden = true;
+    composeWarningsNode.replaceChildren();
+    composeSaveButton.disabled = true;
+    composeSaveButton.textContent = '保存草稿';
+    composeDraftLink.hidden = true;
+    composeRetryButton.hidden = true;
+    composeCancelButton.disabled = false;
+    composeResultTitle.textContent = '';
+    resetComposeStages();
+    composeStatus('正在创建任务…');
+  }
+
+  function composeFragment(id: string): Fragment | null {
+    return composeFragments.find((fragment) => fragment.id === id) ?? fragmentCache.get(id) ?? null;
+  }
+
+  function composeExcerpt(value: string, max = 150): string {
+    const text = value.replace(/\s+/g, ' ').trim();
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
+
+  function showComposeDetail(fragment: Fragment): void {
+    composeDetail.hidden = false;
+    composeDetail.replaceChildren();
+    const label = document.createElement('p');
+    label.className = 'private-eyebrow';
+    label.textContent = fragment.sourceTitle || fragment.sourceSite || '碎片原文';
+    const quote = document.createElement('blockquote');
+    quote.className = 'compose-detail-quote';
+    quote.textContent = fragment.metadata?.preview?.description || fragment.quote;
+    composeDetail.append(label, quote);
+    if (fragment.note) {
+      const note = document.createElement('p');
+      note.className = 'compose-detail-note';
+      note.textContent = fragment.note;
+      composeDetail.append(note);
+    }
+    if (fragment.sourceUrl) {
+      const link = document.createElement('a');
+      link.className = 'compose-detail-link';
+      link.href = fragment.sourceUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = '打开来源 ↗';
+      composeDetail.append(link);
+    }
+  }
+
+  function composeSourceButton(fragment: Fragment): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'compose-source';
+    button.dataset.fragmentId = fragment.id;
+    const quote = document.createElement('span');
+    quote.className = 'compose-source-quote';
+    quote.textContent = composeExcerpt(
+      fragment.metadata?.preview?.description || fragment.quote,
+    );
+    const meta = document.createElement('span');
+    meta.className = 'compose-source-meta';
+    meta.textContent = fragment.sourceTitle || fragment.sourceSite || '本地碎片';
+    if (fragment.tags.length > 0) {
+      const tags = document.createElement('span');
+      tags.className = 'compose-source-tags';
+      tags.textContent = fragment.tags.map((tag) => `#${tag}`).join(' ');
+      meta.append(' ', tags);
+    }
+    button.append(quote, meta);
+    button.addEventListener('click', () => {
+      for (const active of composeClusters.querySelectorAll('.compose-source.is-active')) {
+        active.classList.remove('is-active');
+      }
+      button.classList.add('is-active');
+      showComposeDetail(fragment);
+    });
+    return button;
+  }
+
+  function renderComposeSources(fragments: Fragment[], plan: ComposePlan | null): void {
+    composeClusters.replaceChildren();
+    composeCount.textContent = `${fragments.length} 条`;
+    if (fragments.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'compose-placeholder';
+      empty.textContent = '没有可用的碎片。';
+      composeClusters.append(empty);
+      return;
+    }
+
+    const groups: Array<{ title: string; summary: string; ids: string[] }> = plan
+      ? plan.clusters.map((cluster) => ({
+          title: cluster.title,
+          summary: cluster.summary,
+          ids: cluster.fragmentIds,
+        }))
+      : [{ title: '已选碎片', summary: '', ids: fragments.map((fragment) => fragment.id) }];
+
+    const assigned = new Set(groups.flatMap((group) => group.ids));
+    const leftovers = fragments.filter((fragment) => !assigned.has(fragment.id));
+    if (leftovers.length > 0) {
+      groups.push({
+        title: '未分组',
+        summary: '',
+        ids: leftovers.map((fragment) => fragment.id),
+      });
+    }
+
+    for (const group of groups) {
+      const section = document.createElement('section');
+      section.className = 'compose-cluster';
+      if (plan) {
+        const cluster = plan.clusters.find((item) => item.fragmentIds.includes(group.ids[0] ?? ''));
+        if (cluster) {
+          section.dataset.clusterId = cluster.id;
+          section.tabIndex = 0;
+          section.setAttribute('role', 'button');
+          section.title = '高亮对应小节';
+          const focusSection = (): void => {
+            const index = plan.outline.findIndex((item) => item.clusterId === cluster.id);
+            if (index >= 0) setComposeActiveSection(index);
+          };
+          section.addEventListener('click', focusSection);
+          section.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              focusSection();
+            }
+          });
+        }
+      }
+      const head = document.createElement('div');
+      head.className = 'compose-cluster-head';
+      const title = document.createElement('h4');
+      title.textContent = group.title;
+      const count = document.createElement('span');
+      count.textContent = `${group.ids.length}`;
+      head.append(title, count);
+      section.append(head);
+      if (group.summary) {
+        const summary = document.createElement('p');
+        summary.className = 'compose-cluster-summary';
+        summary.textContent = group.summary;
+        section.append(summary);
+      }
+      for (const id of group.ids) {
+        const fragment = composeFragment(id);
+        if (fragment) section.append(composeSourceButton(fragment));
+      }
+      composeClusters.append(section);
+    }
+  }
+
+  function renderComposePreview(): void {
+    const parts: string[] = [];
+    for (let index = 0; index < (composePlan?.outline.length ?? 0); index += 1) {
+      const section = composeSections.get(index);
+      if (section) parts.push(section);
+    }
+    const text = parts.join('\n\n').trim();
+    composePreview.textContent = text || '等待模型返回正文…';
+    composeWord.textContent = `${text.replace(/\s/g, '').length} 字`;
+  }
+
+  function renderComposeOutline(plan: ComposePlan): void {
+    composeOutline.replaceChildren();
+    plan.outline.forEach((section, index) => {
+      const item = document.createElement('li');
+      item.dataset.outlineIndex = String(index);
+      item.dataset.clusterId = section.clusterId;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'compose-outline-item';
+      button.innerHTML = `<span>${String(index + 1).padStart(2, '0')}</span><b></b><small></small>`;
+      const heading = button.querySelector('b');
+      const intent = button.querySelector('small');
+      if (heading) heading.textContent = section.heading;
+      if (intent) intent.textContent = section.intent || '—';
+      button.addEventListener('click', () => setComposeActiveSection(index));
+      item.append(button);
+      composeOutline.append(item);
+    });
+  }
+
+  function setComposeActiveSection(index: number): void {
+    for (const item of composeOutline.querySelectorAll<HTMLElement>('[data-outline-index]')) {
+      item.classList.toggle('is-active', Number(item.dataset.outlineIndex) === index);
+    }
+    const section = composePlan?.outline[index];
+    if (!section) return;
+    const cluster = composeClusters.querySelector<HTMLElement>(
+      `[data-cluster-id="${CSS.escape(section.clusterId)}"]`,
+    );
+    for (const active of composeClusters.querySelectorAll('.compose-cluster.is-active')) {
+      active.classList.remove('is-active');
+    }
+    cluster?.classList.add('is-active');
+    cluster?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function composeRenderResult(data: {
+    title?: string;
+    markdown?: string;
+    citations?: ComposeCitation[];
+    mode?: string;
+  }): void {
+    if (typeof data.title === 'string' && data.title.trim()) {
+      composeTitle.textContent = data.title.trim();
+      if (composePlan) composePlan.title = data.title.trim();
+    }
+    if (typeof data.markdown === 'string' && data.markdown.trim()) {
+      composeMarkdown = data.markdown;
+      const body = composeMarkdown.replace(/^#\s+.+\n+/, '').trim();
+      composePreview.textContent = body;
+      composeWord.textContent = `${body.replace(/\s/g, '').length} 字`;
+    }
+    if (Array.isArray(data.citations)) {
+      composeCitations.replaceChildren();
+      for (const citation of data.citations) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'compose-citation';
+        chip.title = citation.quote;
+        chip.textContent = `[${citation.token}] ${citation.title}`;
+        chip.addEventListener('click', () => {
+          const fragment = composeFragment(citation.fragmentId);
+          if (fragment) {
+            showComposeDetail(fragment);
+            const source = composeClusters.querySelector<HTMLElement>(
+              `[data-fragment-id="${CSS.escape(fragment.id)}"]`,
+            );
+            source?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        });
+        composeCitations.append(chip);
+      }
+    }
+    composeWarningsNode.replaceChildren();
+    if (composeWarnings.length > 0) {
+      const list = document.createElement('ul');
+      for (const warning of composeWarnings) {
+        const item = document.createElement('li');
+        item.textContent = warning;
+        list.append(item);
+      }
+      composeWarningsNode.append(list);
+      composeWarningsNode.hidden = false;
+    } else {
+      composeWarningsNode.hidden = true;
+    }
+    composeResult.hidden = false;
+    composeResultTitle.textContent = composeTitle.textContent ?? '';
+    composeSaveButton.disabled = false;
+  }
+
+  async function hydrateComposeRun(): Promise<void> {
+    if (!composeRunId) return;
+    try {
+      const response = await fetch(`/api/synthesis/${encodeURIComponent(composeRunId)}`);
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        ok?: boolean;
+        data?: {
+          run?: {
+            status?: string;
+            outline?: ComposePlan | null;
+            resultMarkdown?: string | null;
+            citations?: ComposeCitation[];
+            error?: string | null;
+          };
+        };
+      };
+      const run = data.data?.run;
+      if (!run) return;
+      if (run.outline) {
+        composePlan = run.outline;
+        composeTitle.textContent = run.outline.title || '合成工作台';
+        renderComposeSources(composeFragments, composePlan);
+        renderComposeOutline(composePlan);
+      }
+      if (run.resultMarkdown) {
+        composeRenderResult({
+          title: run.outline?.title,
+          markdown: run.resultMarkdown,
+          citations: run.citations ?? [],
+        });
+      }
+      if (run.status === 'failed' || run.status === 'cancelled') {
+        composeRunState = run.status;
+        composeStatus(run.error || (run.status === 'cancelled' ? '已取消。' : '合成失败。'));
+        composeRetryButton.hidden = false;
+        composeCancelButton.disabled = true;
+      }
+    } catch {
+      /* the stream remains the primary source */
+    }
+  }
+
+  function stopComposeStages(): void {
+    for (const item of composeStageItems) {
+      if (item.classList.contains('is-active')) {
+        item.classList.remove('is-active');
+        item.classList.add('is-cancelled');
+      }
+    }
+  }
+
+  function composeHandleEvent(type: string, payload: Record<string, unknown>): void {
+    switch (type) {
+      case 'run.started':
+        composeRunState = 'running';
+        composeSetMode(typeof payload.model === 'string' ? payload.model : '处理中');
+        composeStatus('开始读取碎片…');
+        break;
+      case 'stage': {
+        const stage = typeof payload.stage === 'string' ? payload.stage : '';
+        const status = payload.status === 'start' || payload.status === 'done' || payload.status === 'skipped'
+          ? payload.status
+          : 'start';
+        setComposeStage(stage, status, typeof payload.detail === 'string' ? payload.detail : '');
+        if (typeof payload.detail === 'string' && payload.detail) composeStatus(payload.detail);
+        break;
+      }
+      case 'dedupe': {
+        const count = Number(payload.count ?? 0);
+        const removed = Array.isArray(payload.removed) ? payload.removed.length : 0;
+        composeStatus(removed > 0 ? `去重后 ${count} 条，合并 ${removed} 条重复。` : `去重后 ${count} 条。`);
+        break;
+      }
+      case 'plan': {
+        const plan = payload as unknown as ComposePlan;
+        if (plan && Array.isArray(plan.clusters) && Array.isArray(plan.outline)) {
+          composePlan = plan;
+          composeTitle.textContent = plan.title || '未命名文章';
+          composeSetMode(plan.mode === 'ai' ? 'AI 合成' : '结构草稿');
+          renderComposeSources(composeFragments, plan);
+          renderComposeOutline(plan);
+          renderComposePreview();
+          composeStatus(`已整理 ${plan.clusters.length} 组线索，准备成文。`);
+        }
+        break;
+      }
+      case 'section.start': {
+        const index = Number(payload.index ?? -1);
+        if (index < 0) break;
+        setComposeActiveSection(index);
+        const heading = typeof payload.heading === 'string' ? payload.heading : '';
+        if (!composeSections.has(index)) {
+          composeSections.set(index, `## ${heading}\n\n`);
+        }
+        renderComposePreview();
+        composeStatus(`正在写：${heading}`);
+        break;
+      }
+      case 'section.delta': {
+        const index = Number(payload.index ?? -1);
+        const text = typeof payload.text === 'string' ? payload.text : '';
+        if (index < 0 || !text) break;
+        composeSections.set(index, (composeSections.get(index) ?? '') + text);
+        renderComposePreview();
+        break;
+      }
+      case 'section.done': {
+        const index = Number(payload.index ?? -1);
+        const heading = typeof payload.heading === 'string' ? payload.heading : '';
+        const text = typeof payload.text === 'string' ? payload.text : '';
+        if (index >= 0 && text) composeSections.set(index, `## ${heading}\n\n${text}`);
+        renderComposePreview();
+        break;
+      }
+      case 'warning': {
+        const message = typeof payload.message === 'string' ? payload.message : '';
+        if (message) composeWarnings.push(message);
+        break;
+      }
+      case 'citation.check': {
+        if (Array.isArray(payload.citations)) {
+            }
+        break;
+      }
+      case 'run.completed': {
+        composeRunState = 'completed';
+        const mode = typeof payload.mode === 'string' ? payload.mode : '';
+        if (mode) composeSetMode(mode === 'ai' ? 'AI 合成' : '结构草稿');
+        composeRenderResult({
+          title: typeof payload.title === 'string' ? payload.title : undefined,
+          markdown: typeof payload.markdown === 'string' ? payload.markdown : undefined,
+          citations: Array.isArray(payload.citations) ? (payload.citations as ComposeCitation[]) : undefined,
+          mode,
+        });
+        if (typeof payload.markdown !== 'string') void hydrateComposeRun();
+        composeStatus(
+          composeWarnings.length > 0
+            ? `已完成，有 ${composeWarnings.length} 条降级说明。`
+            : '已完成。保存草稿后才会进入草稿箱。',
+        );
+        composeSaveButton.disabled = false;
+        composeCancelButton.disabled = true;
+        composeRetryButton.hidden = true;
+        composeSource?.close();
+        composeSource = null;
+        break;
+      }
+      case 'run.failed': {
+        composeRunState = 'failed';
+        stopComposeStages();
+        composePreview.textContent = '合成失败，没有生成可用草稿。';
+        composeStatus(typeof payload.message === 'string' ? payload.message : '合成失败。');
+        composeSaveButton.disabled = true;
+        composeCancelButton.disabled = true;
+        composeRetryButton.hidden = false;
+        composeSource?.close();
+        composeSource = null;
+        break;
+      }
+      case 'run.cancelled': {
+        composeRunState = 'cancelled';
+        stopComposeStages();
+        composePreview.textContent = '已取消，没有生成草稿。';
+        composeStatus('已取消，不会留下半成品。');
+        composeSaveButton.disabled = true;
+        composeCancelButton.disabled = true;
+        composeRetryButton.hidden = false;
+        composeSource?.close();
+        composeSource = null;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  function connectComposeStream(id: string): void {
+    composeSource?.close();
+    composeRunId = id;
+    composeRunState = 'running';
+    const source = new EventSource(`/api/synthesis/${encodeURIComponent(id)}/stream`);
+    composeSource = source;
+    const events = [
+      'run.started',
+      'stage',
+      'dedupe',
+      'plan',
+      'section.start',
+      'section.delta',
+      'section.done',
+      'warning',
+      'citation.check',
+      'run.completed',
+      'run.failed',
+      'run.cancelled',
+    ];
+    for (const type of events) {
+      source.addEventListener(type, (event) => {
+        try {
+          const payload = JSON.parse((event as MessageEvent).data) as Record<string, unknown>;
+          composeHandleEvent(type, payload);
+        } catch {
+          /* ignore malformed frame */
+        }
+      });
+    }
+    source.addEventListener('error', () => {
+      if (composeRunState === 'running') {
+        composeStatus('连接中断，任务可能仍在运行；正在尝试恢复…');
+      }
+    });
+  }
+
+  async function startCompose(): Promise<void> {
+    if (selectedIds.size === 0) return;
+    const chosen = [...selectedIds]
+      .map((id) => fragmentCache.get(id))
+      .filter((fragment): fragment is Fragment => Boolean(fragment));
+    if (chosen.length === 0) {
+      if (status) status.textContent = '选中的碎片已不在列表里，刷新后再试。';
+      return;
+    }
+
+    composeFragments = chosen;
+    composeResetView();
+    composeOpen();
+    composeRunId = '';
+    composeRunState = 'idle';
+    composeSource?.close();
+    composeSource = null;
+    renderComposeSources(chosen, null);
+
+    try {
+      const response = await fetch('/api/synthesis', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fragmentIds: chosen.map((fragment) => fragment.id) }),
+      });
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        data?: { id?: string; runId?: string; status?: string };
+        error?: { message?: string; details?: { runId?: string } };
+      };
+      if (response.status === 409 && data.error?.details?.runId) {
+        connectComposeStream(data.error.details.runId);
+        return;
+      }
+      if (!response.ok || !data.ok || !data.data?.id) {
+        throw new Error(data.error?.message || '创建合成任务失败。');
+      }
+      connectComposeStream(data.data.id);
+    } catch (error) {
+      composeRunState = 'failed';
+      composeStatus(error instanceof Error ? error.message : '创建合成任务失败。');
+      composeRetryButton.hidden = true;
+    }
+  }
+
+  function composeOpen(): void {
+    if (!composeDialog?.open) composeDialog?.showModal();
+  }
+
+  function composeClose(): void {
+    composeDialog?.close();
+  }
+
+  function openComposeDialog(): void {
+    if (composeRunState === 'running' && composeRunId) {
+      composeOpen();
+      if (!composeSource) connectComposeStream(composeRunId);
+      return;
+    }
+    void startCompose();
+  }
+
+  async function deleteFragment(
+    id: string,
+    button: HTMLButtonElement,
+    onFailure?: () => void,
+  ): Promise<void> {
+    const card = button.closest<HTMLElement>('.fragment-card');
+    const oldRects = captureCardRects(
+      renderedCards.filter((item) => item.dataset.fragmentId !== id),
+    );
+    button.disabled = true;
+
+    try {
+      const response = await fetch(`/api/fragments/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      if (!response.ok) throw new Error('删除失败');
+
+      if (card) {
+        card.classList.add('is-burning');
+        const ember = document.createElement('div');
+        ember.className = 'burn-edge';
+        ember.setAttribute('aria-hidden', 'true');
+        ember.innerHTML = `
+          <div class="burn-edge__char"></div>
+          <svg class="burn-edge__filament" viewBox="0 0 500 24" preserveAspectRatio="none">
+            <path class="burn-edge__ash" d="M 0 15 L 22 13 L 45 18 L 68 13 L 92 17 L 125 10 L 155 16 L 182 11 L 215 19 L 245 13 L 278 18 L 310 9 L 342 15 L 370 11 L 405 18 L 438 12 L 468 17 L 500 13" />
+            <g class="burn-edge__ember-group--a">
+              <path class="burn-edge__ember-glow" d="M 38 17 L 45 18 L 68 13 L 85 16" />
+              <path class="burn-edge__ember-core" d="M 38 17 L 45 18 L 68 13 L 85 16" />
+              <path class="burn-edge__ember-glow" d="M 265 16 L 278 18 L 310 9 L 322 13" />
+              <path class="burn-edge__ember-core" d="M 265 16 L 278 18 L 310 9 L 322 13" />
+            </g>
+            <g class="burn-edge__ember-group--b">
+              <path class="burn-edge__ember-glow" d="M 142 14 L 155 16 L 182 11 L 198 15" />
+              <path class="burn-edge__ember-core" d="M 142 14 L 155 16 L 182 11 L 198 15" />
+              <path class="burn-edge__ember-glow" d="M 395 17 L 405 18 L 438 12 L 452 15" />
+              <path class="burn-edge__ember-core" d="M 395 17 L 405 18 L 438 12 L 452 15" />
+            </g>
+          </svg>
+          <div class="burn-sparks">
+            <span class="burn-spark"></span>
+            <span class="burn-spark"></span>
+            <span class="burn-spark"></span>
+          </div>
+        `;
+        card.append(ember);
+
+        await new Promise<void>((resolve) => {
+          if (prefersReducedMotion()) {
+            resolve();
+            return;
+          }
+
+          let settled = false;
+          let timer = 0;
+          const finish = (): void => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            card.removeEventListener('animationend', onEnd);
+            resolve();
+          };
+          const onEnd = (event: AnimationEvent): void => {
+            if (event.animationName === 'scrap-burn') finish();
+          };
+
+          card.addEventListener('animationend', onEnd);
+          // Fallback for browsers that do not emit animationend for a
+          // clipped element; slightly longer than the CSS duration.
+          timer = window.setTimeout(finish, 1_200);
+        });
+
+        // Let the final clip/opacity frame paint before replacing the list.
+        await new Promise((resolve) => window.setTimeout(resolve, 60));
+      }
+
+      // Do not let the list rebuild collapse the document height and jump the
+      // page back to the top. Restore the exact scroll position after the new
+      // masonry layout exists.
+      await load({ preserveScroll: true, oldRects });
+    } catch {
+      card?.classList.remove('is-burning');
+      card?.querySelector('.burn-edge')?.remove();
+      button.disabled = false;
+      onFailure?.();
+      if (status) status.textContent = '删除失败，请重试。';
+    }
+  }
+
+  function remoteImageSrc(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    try {
+      const url = new URL(value);
+      return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
+
+  function imageOf(fragment: Fragment): ImageMetadata | null {
+    const image = fragment.metadata?.image;
+    if (!image || typeof image !== 'object') return null;
+    const src = remoteImageSrc(image.src);
+    return src ? { ...image, src } : null;
+  }
+
+  function openImageViewer(fragment: Fragment, image: ImageMetadata): void {
+    imageViewerImage.src = image.src;
+    imageViewerImage.alt = image.alt || fragment.quote || '图片';
+    imageViewerCaption.textContent = [
+      image.alt || fragment.quote,
+      fragment.sourceTitle || fragment.sourceSite,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    imageViewerOrigin.href = fragment.sourceUrl || image.pageUrl || image.src;
+    if (!imageViewer.open) imageViewer.showModal();
+  }
+
+  function renderImage(fragment: Fragment, image: ImageMetadata): HTMLElement {
+    const card = document.createElement('article');
+    card.className = 'fragment-card fragment-card--image';
+    card.dataset.fragmentId = fragment.id;
+
+    const frame = document.createElement('button');
+    frame.className = 'image-frame';
+    frame.type = 'button';
+    frame.setAttribute('aria-label', `查看大图：${image.alt || fragment.quote || '图片'}`);
+
+    const picture = document.createElement('img');
+    picture.src = image.src;
+    picture.alt = image.alt || fragment.quote || '';
+    picture.loading = 'lazy';
+    picture.decoding = 'async';
+    picture.referrerPolicy = 'no-referrer';
+    picture.addEventListener('error', () => {
+      picture.remove();
+      frame.classList.add('is-broken');
+      const fallback = document.createElement('span');
+      fallback.className = 'image-broken';
+      fallback.textContent = '图片加载失败，点开原图';
+      frame.append(fallback);
+    });
+
+    const hint = document.createElement('span');
+    hint.className = 'image-view-hint';
+    hint.textContent = '查看大图';
+    frame.append(picture, hint);
+    frame.addEventListener('click', () => openImageViewer(fragment, image));
+    card.append(frame);
+
+    if (fragment.quote) {
+      const caption = document.createElement('p');
+      caption.className = 'image-caption';
+      caption.textContent = fragment.quote;
+      attachTextTooltip(caption, fragment.quote);
+      card.append(caption);
+    }
+
+    if (fragment.note) {
+      const note = document.createElement('p');
+      note.className = 'fragment-note';
+      note.textContent = fragment.note;
+      card.append(note);
+    }
+
+    if (fragment.tags.length > 0) {
+      const tags = document.createElement('div');
+      tags.className = 'fragment-tags';
+      for (const tag of fragment.tags) {
+        const item = document.createElement('span');
+        item.textContent = tag;
+        tags.append(item);
+      }
+      card.append(tags);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'fragment-meta';
+    const time = document.createElement('time');
+    time.dateTime = fragment.capturedAt;
+    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
+    meta.append(time);
+
+    const source = document.createElement('a');
+    source.href = fragment.sourceUrl || image.pageUrl || image.src;
+    source.target = '_blank';
+    source.rel = 'noopener noreferrer';
+    source.textContent =
+      fragment.sourceTitle || fragment.sourceSite || hostOf(source.href) || '来源';
+    meta.append(source);
+    card.append(meta);
+
+    card.append(renderActions(card, fragment));
+    attachCardSelection(card, fragment);
+    return card;
+  }
+
+  function hostOf(value: string): string {
+    try {
+      return new URL(value).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  }
+
+  function renderLink(fragment: Fragment): HTMLElement {
+    const preview = fragment.metadata?.preview;
+    const card = document.createElement('article');
+    card.className = 'fragment-card fragment-card--link';
+    card.dataset.fragmentId = fragment.id;
+    card.dataset.provider = preview?.provider || 'generic';
+
+    const link = document.createElement('a');
+    link.className = 'link-card';
+    link.href = fragment.sourceUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+
+    if (preview?.image) {
+      const image = document.createElement('img');
+      image.className = 'link-thumb';
+      image.src = preview.image;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      image.referrerPolicy = 'no-referrer';
+      image.addEventListener('error', () => image.remove());
+      link.append(image);
+    } else {
+      const mark = document.createElement('span');
+      mark.className = 'link-mark';
+      mark.textContent =
+        preview?.provider === 'x'
+          ? 'X'
+          : preview?.provider === 'douyin'
+            ? '抖'
+            : preview?.provider === 'zhihu'
+              ? '知'
+              : '↗';
+      link.append(mark);
+    }
+
+    const copy = document.createElement('span');
+    copy.className = 'link-copy';
+
+    const site = document.createElement('span');
+    site.className = 'link-site';
+    const siteName = preview?.siteName || fragment.sourceSite || hostOf(fragment.sourceUrl) || '链接';
+    const siteLabel = preview?.articleUrl ? `${siteName} 文章` : siteName;
+    site.textContent = [
+      siteLabel,
+      preview?.author,
+      previewDate(preview?.publishedAt),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    copy.append(site);
+
+    const isXPost = preview?.provider === 'x' && !preview.articleUrl;
+    if (isXPost) {
+      // A normal X post has no article title; the author is already in the
+      // byline above, so the post text becomes the main content.
+      const post = document.createElement('span');
+      post.className = 'link-post-text';
+      const postText = preview?.description?.trim() || '这条帖子没有文字内容，点开查看。';
+      post.textContent = postText;
+      attachTextTooltip(post, postText);
+      copy.append(post);
+    } else {
+      const title = document.createElement('span');
+      title.className = 'link-title';
+      const titleText =
+        preview?.title || fragment.sourceTitle || hostOf(fragment.sourceUrl) || '未命名链接';
+      title.textContent = titleText;
+      attachTextTooltip(title, titleText);
+      copy.append(title);
+
+      if (preview?.description) {
+        const description = document.createElement('span');
+        description.className = 'link-desc';
+        description.textContent = preview.description;
+        attachTextTooltip(description, preview.description);
+        copy.append(description);
+      }
+    }
+
+    const domain = document.createElement('span');
+    domain.className = 'link-domain';
+    domain.textContent = hostOf(fragment.sourceUrl);
+    copy.append(domain);
+
+    link.append(copy);
+    card.append(link);
+
+    if (fragment.note) {
+      const note = document.createElement('p');
+      note.className = 'fragment-note';
+      note.textContent = fragment.note;
+      card.append(note);
+    }
+
+    if (fragment.tags.length > 0) {
+      const tags = document.createElement('div');
+      tags.className = 'fragment-tags';
+      for (const tag of fragment.tags) {
+        const item = document.createElement('span');
+        item.textContent = tag;
+        tags.append(item);
+      }
+      card.append(tags);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'fragment-meta';
+    const time = document.createElement('time');
+    time.dateTime = fragment.capturedAt;
+    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
+    meta.append(time);
+    card.append(meta);
+
+    card.append(renderActions(card, fragment));
+    attachCardSelection(card, fragment);
+
+    return card;
+  }
+
+  function render(fragment: Fragment): HTMLElement {
+    if (fragment.kind === 'link') return renderLink(fragment);
+    if (fragment.kind === 'image') {
+      const image = imageOf(fragment);
+      if (image) return renderImage(fragment, image);
+    }
+
+    const card = document.createElement('article');
+    card.className = 'fragment-card fragment-card--quote';
+    card.dataset.fragmentId = fragment.id;
+
+    const quote = document.createElement('blockquote');
+    quote.className = 'fragment-quote';
+    quote.textContent = fragment.quote;
+    card.append(quote);
+
+    if (fragment.note) {
+      const note = document.createElement('p');
+      note.className = 'fragment-note';
+      note.textContent = fragment.note;
+      card.append(note);
+    }
+
+    if (fragment.tags.length > 0) {
+      const tags = document.createElement('div');
+      tags.className = 'fragment-tags';
+      for (const tag of fragment.tags) {
+        const item = document.createElement('span');
+        item.textContent = tag;
+        tags.append(item);
+      }
+      card.append(tags);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'fragment-meta';
+    const time = document.createElement('time');
+    time.dateTime = fragment.capturedAt;
+    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
+    meta.append(time);
+
+    if (fragment.sourceUrl) {
+      const source = document.createElement('a');
+      source.href = fragment.sourceUrl;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+      source.textContent = fragment.sourceTitle || fragment.sourceSite || '来源';
+      meta.append(source);
+    } else if (fragment.sourceTitle) {
+      const source = document.createElement('span');
+      source.textContent = fragment.sourceTitle;
+      meta.append(source);
+    }
+
+    card.append(meta);
+
+    card.append(renderActions(card, fragment));
+    attachCardSelection(card, fragment);
+
+    return card;
+  }
+
+  async function load(
+    options: { preserveScroll?: boolean; oldRects?: Map<string, DOMRect> } = {},
+  ): Promise<void> {
+    if (!list || !status) return;
+    const scroll = options.preserveScroll
+      ? { x: window.scrollX, y: window.scrollY }
+      : undefined;
+    status.textContent = '读取中…';
+
+    const query = input?.value.trim() ?? '';
+    const tag = activeTag;
+    const from = fromInput?.value ?? '';
+    const to = toInput?.value ?? '';
+    if (from && to && from > to) {
+      status.textContent = '开始日期不能晚于结束日期。';
+      return;
+    }
+
+    clearSelection();
+    fragmentCache.clear();
+
+    const url = new URL('/api/fragments', window.location.origin);
+    url.searchParams.set('limit', '50');
+    if (query) url.searchParams.set('query', query);
+    if (tag) url.searchParams.set('tag', tag);
+    if (from) url.searchParams.set('from', new Date(`${from}T00:00:00`).toISOString());
+    if (to) url.searchParams.set('to', new Date(`${to}T23:59:59.999`).toISOString());
+
+    try {
+      const response = await fetch(url);
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      const data = (await response.json()) as FragmentsResponse;
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error?.message || '读取失败');
+      }
+
+      const fragments = data.data?.fragments ?? [];
+      const total = data.data?.total ?? fragments.length;
+      const hasFilters = Boolean(query || tag || from || to);
+      if (sortOrder === 'asc') fragments.reverse();
+
+      if (fragments.length === 0) {
+        renderedCards = [];
+        const empty = document.createElement('div');
+        empty.className = 'private-empty';
+        empty.textContent = hasFilters
+          ? '没有匹配的碎片。换一个关键词或筛选条件试试。'
+          : 'Inbox 还是空的。用插件采集第一条，或者先用 API 写一条。';
+        list.replaceChildren(empty);
+      } else {
+        const cards: HTMLElement[] = [];
+        for (const fragment of fragments) {
+          fragmentCache.set(fragment.id, fragment);
+          cards.push(render(fragment));
+        }
+        renderedCards = cards;
+        layoutCards(cards, {
+          animate: Boolean(options.oldRects),
+          oldRects: options.oldRects,
+        });
+      }
+
+      if (data.data?.tags) renderTagChips(data.data.tags, tag);
+      updateDateLabel();
+      status.textContent = hasFilters ? `找到 ${total} 条` : `共 ${total} 条碎片`;
+      if (scroll) {
+        const restoreScroll = (): void => {
+          // `behavior: instant` avoids the scroll being treated as a smooth
+          // scroll and still being at 0 when the masonry layout settles.
+          window.scrollTo({
+            left: scroll.x,
+            top: scroll.y,
+            behavior: 'instant' as ScrollBehavior,
+          });
+          document.documentElement.scrollTop = scroll.y;
+        };
+        restoreScroll();
+        window.requestAnimationFrame(restoreScroll);
+      }
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : '读取失败。';
+    }
+  }
+
+  linkForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!linkForm || !linkUrl || !status) return;
+
+    const button = linkForm.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (!button) return;
+    button.disabled = true;
+    status.textContent = '正在读取链接预览…';
+
+    try {
+      const response = await fetch('/api/fragments/link', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          url: linkUrl.value.trim(),
+          note: linkNote?.value.trim() || '',
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: { message?: string; code?: string };
+      };
+
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      if (response.status === 409) {
+        status.textContent = '这条链接已经在 Inbox 里了。';
+        linkForm.reset();
+        await load();
+        return;
+      }
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error?.message || '保存链接失败');
+      }
+
+      status.textContent = '已保存，预览已生成。';
+      linkForm.reset();
+      await load();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '保存链接失败。';
+      status.textContent = /failed to fetch|networkerror|load failed/i.test(message)
+        ? '连接不到本地服务，先确认 4400 端口的服务还在运行。'
+        : message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    commitDateInputs();
+    closeDatePicker();
+    void load();
+  });
+
+  clearFilters?.addEventListener('click', () => {
+    activeTag = '';
+    form?.reset();
+    resetDateFilter();
+    setDateMode('single');
+    closeDatePicker();
+    void load();
+  });
+
+  dateTrigger?.addEventListener('click', () => {
+    if (!datePopover) return;
+    if (datePopover.hidden) openDatePicker();
+    else closeDatePicker();
+  });
+
+  for (const button of dateModeButtons) {
+    button.addEventListener('click', () => {
+      const mode = button.dataset.dateMode === 'range' ? 'range' : 'single';
+      setDateMode(mode);
+    });
+  }
+
+  dateApplyButton?.addEventListener('click', applyDatePicker);
+  dateClearButton?.addEventListener('click', clearDatePicker);
+
+  rangeCalendar?.addEventListener('rangestart', () => {
+    // The range is not complete yet; applying now would commit the old value.
+    if (dateApplyButton) dateApplyButton.disabled = true;
+  });
+
+  rangeCalendar?.addEventListener('rangeend', () => {
+    if (dateApplyButton) dateApplyButton.disabled = false;
+  });
+
+  window.addEventListener('resize', () => {
+    syncCalendarMonths();
+    syncMasonryColumns();
+  });
+
+  for (const button of datePresetButtons) {
+    button.addEventListener('click', () => {
+      const preset = button.dataset.datePreset;
+      presetDate(preset === 'today' ? 0 : Number(preset ?? 7));
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!datePicker || datePicker.contains(event.target as Node)) return;
+    closeDatePicker();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDatePicker();
+  });
+
+  for (const button of layoutButtons) {
+    button.addEventListener('click', () =>
+      applyLayout(button.dataset.layoutOption ?? '2', true, true),
+    );
+  }
+
+  refreshButton?.addEventListener('click', () => {
+    void load({ preserveScroll: true });
+  });
+
+  window.addEventListener('focus', autoRefreshIfStale);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) autoRefreshIfStale();
+  });
+
+  sortButton?.addEventListener('click', () => {
+    sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+    try {
+      localStorage.setItem('josh-inbox-sort', sortOrder);
+    } catch {
+      /* storage can be unavailable in private windows */
+    }
+    applySortLabel();
+    void load();
+  });
+
+  selectModeButton?.addEventListener('click', () => setSelecting(!selecting));
+  selectAllButton?.addEventListener('click', selectAllVisible);
+
+  clearSelectionButton?.addEventListener('click', () => setSelecting(false));
+
+  synthesizeButton?.addEventListener('click', () => {
+    if (selectedIds.size > 0) openComposeDialog();
+  });
+
+  for (const button of composeCloseButtons) {
+    button.addEventListener('click', composeClose);
+  }
+
+  composeDialog?.addEventListener('click', (event) => {
+    if (event.target === composeDialog) composeClose();
+  });
+
+  composeCancelButton?.addEventListener('click', async () => {
+    if (!composeRunId) return;
+    composeCancelButton.disabled = true;
+    composeStatus('正在取消…');
+    try {
+      await fetch(`/api/synthesis/${encodeURIComponent(composeRunId)}/cancel`, {
+        method: 'POST',
+      });
+    } catch {
+      composeStatus('取消失败，任务可能还在运行。');
+      composeCancelButton.disabled = false;
+    }
+  });
+
+  composeRetryButton?.addEventListener('click', async () => {
+    if (!composeRunId) return;
+    composeRetryButton.hidden = true;
+    composeCancelButton.disabled = false;
+    composeSaveButton.disabled = true;
+    composeResult.hidden = true;
+    composeResultTitle.textContent = '';
+    composeWarningsNode.hidden = true;
+    composeWarningsNode.replaceChildren();
+    composeDetail.hidden = true;
+    composePreview.textContent = '正在重试…';
+    composeStatus('保留已选碎片，重新开始…');
+    try {
+      const response = await fetch(`/api/synthesis/${encodeURIComponent(composeRunId)}/retry`, {
+        method: 'POST',
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        data?: { id?: string };
+        error?: { message?: string };
+      };
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      if (!response.ok || !data.ok || !data.data?.id) {
+        throw new Error(data.error?.message || '重试失败。');
+      }
+      composeSections = new Map();
+      composeMarkdown = '';
+      composePlan = null;
+        composeWarnings = [];
+      composeTitle.textContent = '合成工作台';
+      composeMode.textContent = '准备中';
+      composeCount.textContent = `${composeFragments.length} 条`;
+      composeOutline.replaceChildren();
+      resetComposeStages();
+      renderComposeSources(composeFragments, null);
+      connectComposeStream(data.data.id);
+    } catch (error) {
+      composeRunState = 'failed';
+      composeStatus(error instanceof Error ? error.message : '重试失败。');
+      composeRetryButton.hidden = false;
+    }
+  });
+
+  composeSaveButton?.addEventListener('click', async () => {
+    if (!composeRunId || composeRunState !== 'completed') return;
+    composeSaveButton.disabled = true;
+    composeStatus('正在保存草稿…');
+    try {
+      const response = await fetch(
+        `/api/synthesis/${encodeURIComponent(composeRunId)}/save`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ title: composeTitle.textContent ?? '' }),
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        data?: { id?: string };
+        error?: { message?: string };
+      };
+      if (response.status === 401) {
+        window.location.assign('/login?next=/inbox');
+        return;
+      }
+      if (!response.ok || !data.ok) throw new Error(data.error?.message || '保存失败。');
+      composeSaveButton.textContent = '已保存';
+      if (data.data?.id) {
+        composeDraftLink.href = `/drafts/${encodeURIComponent(data.data.id)}`;
+        composeDraftLink.hidden = false;
+      }
+      composeStatus('草稿已保存。');
+    } catch (error) {
+      composeSaveButton.disabled = false;
+      composeStatus(error instanceof Error ? error.message : '保存失败。');
+    }
+  });
+
+  imageViewerClose.addEventListener('click', () => imageViewer.close());
+  imageViewer.addEventListener('click', (event) => {
+    if (event.target === imageViewer) imageViewer.close();
+  });
+  imageViewer.addEventListener('close', () => {
+    imageViewerImage.removeAttribute('src');
+    imageViewerCaption.textContent = '';
+  });
+
+  logout?.addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/login');
+  });
+
+  try {
+    const storedLayout = localStorage.getItem('josh-inbox-layout');
+    applyLayout(storedLayout ?? '2', false);
+    const storedSort = localStorage.getItem('josh-inbox-sort');
+    if (storedSort === 'asc') sortOrder = 'asc';
+  } catch {
+    applyLayout('2', false);
+  }
+  applySortLabel();
+  syncCalendarMonths();
+  setDateMode('single');
+  updateDateLabel();
+
+  void load();
+</script>

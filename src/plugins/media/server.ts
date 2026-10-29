@@ -1,100 +1,31 @@
+import { fetchLinkPreview, LinkPreviewError } from '@/lib/link-preview';
 import { ActionError, type ActionHandler } from '../types';
 import { assertPublicUrl } from '../validate';
 
-const USER_AGENT = 'josh-portal/2.0';
-const MAX_HTML_BYTES = 600_000;
-
-function decodeEntities(value: string): string {
-  return value
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => String.fromCodePoint(Number.parseInt(code, 16)));
-}
-
-function parseAttributes(tag: string): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  for (const match of tag.matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    attrs[match[1].toLowerCase()] = decodeEntities(match[2] ?? match[3] ?? '');
-  }
-  return attrs;
-}
-
-function parsePage(html: string) {
-  const meta = new Map<string, string>();
-  for (const tag of html.matchAll(/<meta\b[^>]*>/gi)) {
-    const attrs = parseAttributes(tag[0]);
-    const key = (attrs.property || attrs.name || '').toLowerCase();
-    if (key && attrs.content) meta.set(key, attrs.content.trim());
-  }
-
-  const titleTag = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '';
-  const descriptionTag = html.match(
-    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i,
-  )?.[1];
-
-  return {
-    title: meta.get('og:title') || meta.get('twitter:title') || decodeEntities(titleTag).trim(),
-    description:
-      meta.get('og:description') ||
-      meta.get('twitter:description') ||
-      (descriptionTag ? decodeEntities(descriptionTag) : '') ||
-      meta.get('description') ||
-      '',
-    image: meta.get('og:image') || meta.get('twitter:image') || '',
-    video: meta.get('og:video:url') || meta.get('og:video') || meta.get('twitter:player:stream') || '',
-    siteName: meta.get('og:site_name') || '',
-  };
-}
-
-const probe: ActionHandler = async (input) => {
-  let target: URL;
+const probe: ActionHandler = async (input, context) => {
   try {
-    target = assertPublicUrl(String(input.url ?? ''));
+    const preview = await fetchLinkPreview(String(input.url ?? ''), context.env);
+    return {
+      url: preview.url,
+      finalUrl: preview.finalUrl,
+      title: preview.title,
+      description: preview.description,
+      image: preview.image,
+      video: preview.video,
+      siteName: preview.siteName,
+      author: preview.author,
+      provider: preview.provider,
+    };
   } catch (error) {
-    throw new ActionError('INVALID_URL', 400, error instanceof Error ? error.message : '链接不合法。');
+    if (error instanceof LinkPreviewError) {
+      throw new ActionError(error.code, error.status, error.message);
+    }
+    throw new ActionError(
+      'FETCH_FAILED',
+      502,
+      error instanceof Error ? error.message : '读取这个链接失败。',
+    );
   }
-
-  let response: Response;
-  try {
-    response = await fetch(target, {
-      headers: {
-        accept: 'text/html,application/xhtml+xml',
-        'user-agent': USER_AGENT,
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(9_000),
-    });
-  } catch {
-    throw new ActionError('FETCH_FAILED', 504, '读取这个链接超时，或对方拒绝了请求。');
-  }
-
-  if (!response.ok) {
-    throw new ActionError('FETCH_FAILED', 502, `目标页面返回 ${response.status}。`);
-  }
-
-  const finalUrl = assertPublicUrl(response.url);
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
-    throw new ActionError('NOT_HTML', 415, '这个链接不是网页，无法读取预览信息。');
-  }
-
-  const declaredLength = Number(response.headers.get('content-length') ?? 0);
-  if (declaredLength > MAX_HTML_BYTES) {
-    throw new ActionError('PAGE_TOO_LARGE', 413, '页面太大，已停止读取。');
-  }
-
-  const html = (await response.text()).slice(0, MAX_HTML_BYTES);
-  const info = parsePage(html);
-
-  return {
-    url: target.href,
-    finalUrl: finalUrl.href,
-    ...info,
-  };
 };
 
 const resolve: ActionHandler = async (input, context) => {
