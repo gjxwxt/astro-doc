@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Josh Inbox",
-  "version": "0.2.0",
-  "description": "把当前网页的选中文字、链接或图片保存到私有 Josh Inbox。",
+  "version": "0.3.0",
+  "description": "把当前网页的选中文字、链接、图片或同页多段标注保存到私有 Josh Inbox。",
   "permissions": [
     "activeTab",
     "scripting",

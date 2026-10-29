@@ -13,6 +13,7 @@ Chrome / Edge Manifest V3 的最小采集插件。选中文字时保存引用，
 5. 选中文字后也可以直接右键：**存到 Josh Inbox → #标签 / 不分类**。标签菜单从 Inbox 的标签读取；第一次配置 Token 后会自动刷新。
 6. 右键链接：**保存链接到 Josh Inbox**，直接生成链接卡片，不再需要打开 Inbox。
 7. 右键图片：**保存图片到 Josh Inbox**，保存远程图片 URL 和来源，不下载图片文件。
+8. 右键页面或选中文字：**批量标注此页（多段一组）**，右下角出现批量面板；之后每次选中文字，选区上方出现“+ 加入组”，可连续加入多段，最后选标签并“保存为组”。
 
 ## 行为
 
@@ -20,6 +21,7 @@ Chrome / Edge Manifest V3 的最小采集插件。选中文字时保存引用，
 - 选中文字右键：直接按标签保存，不打开弹窗；标签来自 Inbox 已有标签。
 - 右键链接：`POST /api/fragments/link`，服务端生成链接卡片；保存结果用页面顶部的小气泡提示，失败时退回扩展 badge。
 - 右键图片：`POST /api/fragments`，`kind: 'image'`，只保存远程 `src`、来源页和 alt；图片不下载、不转存。
+- 批量标注：扩展在页面注入一个 Shadow DOM 面板，只收集 `quote` / 上下文 / 标题 / URL / 站点；保存时后台按同一 `groupId` 逐条 `POST /api/fragments`，Inbox 会把它们收成一张“同页”组卡片。单次最多 50 段，每段正文上限 20,000 字符。
 - 没选中文字：`POST /api/fragments/link`，服务端抓取标题 / 描述 / 封面，生成链接卡片。
 - X：使用官方 oEmbed；抖音：页面有反爬时保存为“抖音链接”卡片，配置 `MEDIA_RESOLVER_URL` 后可以补上标题和封面。
 - 重复保存返回 409，扩展会提示“已经在 Inbox 里了”。
@@ -28,4 +30,4 @@ Chrome / Edge Manifest V3 的最小采集插件。选中文字时保存引用，
 
 扩展的 `host_permissions` 目前只包含本地 `localhost:4400`。部署到正式域名后，把域名加进 `manifest.json` 的 `host_permissions`，重新加载扩展，并在设置里改 API 地址。
 
-Token 只保存在 `chrome.storage.local`，不注入页面；请求只走扩展的 service worker / popup。
+Token 只保存在 `chrome.storage.local`，不注入页面；批量面板不接触 Token，保存请求由扩展的 service worker 发出。

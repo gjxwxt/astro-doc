@@ -92,7 +92,7 @@ Phase 2 只生成**新文章**。改旧文章、insert-only diff、自动开 PR�
 - 右键图片 → 保存远程图片 URL / alt / 来源页，生成图片卡片；点击卡片进入灯箱查看大图
 - `/inbox` 筛选、编辑、删除、多选
 - 图片只保存远程 URL，不下载、不转存；灯箱只提供“打开原图”
-- `fragments.group_id` 已写入数据层，批量标注 UI 下一阶段接
+- 批量标注：右键“批量标注此页” → 连续加入多段 → 共用 `groupId` 保存；Inbox 收成一张“同页”组卡片，可展开、整组选择
 - 多选后出现“合成文章”入口
 
 验收：
@@ -105,6 +105,7 @@ Phase 2 只生成**新文章**。改旧文章、insert-only diff、自动开 PR�
 - 标签 / 日期筛选与搜索可以组合使用
 - 单条编辑随想和标签后，列表与筛选结果同步更新
 - 多选后底部出现“合成文章”入口；已接入 2C 工作台
+- 批量标注可把同一页的 3 段文字保存成一组；Inbox 默认显示第一段，展开后能看到全部，点“选择整组”能一次加入合成
 - 手机宽度下 Inbox 可用
 
 > `/calendar` 已砍：个人碎片量不需要月历，日期筛选在 Inbox 里解决。
@@ -262,6 +263,8 @@ drafts
 - 权限只开 `activeTab`、`scripting`、`storage`、`contextMenus`
 - API 地址和 Token 存在 `chrome.storage.local`
 - 请求只用 Bearer Token，不把 Token 注入页面
+- 批量面板用 Shadow DOM 注入页面；页面侧只收集选段文本、上下文和来源，保存由 service worker 带 Token 发送
+- 同一批碎片共用 `groupId`，单批最多 50 段；Inbox 只按 `groupId` 折叠展示，不改碎片本身的编辑/删除语义
 - 采集正文长度上限 20,000 字符；上下文各 500 字符
 - 图片不下载、不转存；链接卡片只引用目标页提供的图片 URL
 - 图片碎片的 `kind` 是 `image`，`metadata.image.src` 只接受 http(s) 远程 URL；没有本地图床前不提供真实下载按钮

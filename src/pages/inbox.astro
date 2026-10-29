@@ -541,6 +541,18 @@ if (!getSession(Astro.request, process.env)) {
       box.checked = selected;
       box.closest('.fragment-card')?.classList.toggle('is-selected', selected);
     }
+    for (const group of root?.querySelectorAll<HTMLElement>('.fragment-group') ?? []) {
+      const ids = [...group.querySelectorAll<HTMLInputElement>('[data-fragment-select]')]
+        .map((box) => box.dataset.fragmentSelect ?? '')
+        .filter(Boolean);
+      const allSelected = ids.length > 0 && ids.every((id) => selectedIds.has(id));
+      group.classList.toggle('is-selected', allSelected);
+      const button = group.querySelector<HTMLButtonElement>('[data-group-select]');
+      if (button) {
+        button.textContent = allSelected ? '取消整组' : '选择整组';
+        button.setAttribute('aria-pressed', String(allSelected));
+      }
+    }
     updateSelectionBar();
   }
 
@@ -583,6 +595,21 @@ if (!getSession(Astro.request, process.env)) {
 
   function selectAllVisible(): void {
     for (const id of fragmentCache.keys()) selectedIds.add(id);
+    syncSelectionUI();
+  }
+
+  function selectGroup(group: HTMLElement): void {
+    if (!selecting) setSelecting(true);
+    const ids = [...group.querySelectorAll<HTMLInputElement>('[data-fragment-select]')]
+      .map((box) => box.dataset.fragmentSelect ?? '')
+      .filter(Boolean);
+    if (ids.length === 0) return;
+    const allSelected = ids.every((id) => selectedIds.has(id));
+    for (const id of ids) {
+      if (allSelected) selectedIds.delete(id);
+      else selectedIds.add(id);
+    }
+    lastSelectedId = ids[0];
     syncSelectionUI();
   }
 
@@ -675,7 +702,7 @@ if (!getSession(Astro.request, process.env)) {
 
   list?.addEventListener('pointerdown', startMarquee);
 
-  function selectionControl(card: HTMLElement, fragment: Fragment): HTMLLabelElement {
+  function selectionControl(fragment: Fragment): HTMLLabelElement {
     const label = document.createElement('label');
     label.className = 'fragment-select';
     const box = document.createElement('input');
@@ -687,8 +714,7 @@ if (!getSession(Astro.request, process.env)) {
       if (box.checked) selectedIds.add(fragment.id);
       else selectedIds.delete(fragment.id);
       lastSelectedId = fragment.id;
-      card.classList.toggle('is-selected', box.checked);
-      updateSelectionBar();
+      syncSelectionUI();
     });
     const text = document.createElement('span');
     text.textContent = '选择';
@@ -872,7 +898,7 @@ if (!getSession(Astro.request, process.env)) {
   function renderActions(card: HTMLElement, fragment: Fragment): HTMLElement {
     const actions = document.createElement('div');
     actions.className = 'fragment-actions';
-    actions.append(selectionControl(card, fragment));
+    actions.append(selectionControl(fragment));
 
     const buttons = document.createElement('div');
     buttons.className = 'fragment-action-buttons';
@@ -1159,10 +1185,16 @@ if (!getSession(Astro.request, process.env)) {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  function cardKey(card: HTMLElement): string {
+    if (card.dataset.fragmentId) return card.dataset.fragmentId;
+    if (card.dataset.groupId) return `group:${card.dataset.groupId}`;
+    return '';
+  }
+
   function captureCardRects(cards: HTMLElement[]): Map<string, DOMRect> {
     const rects = new Map<string, DOMRect>();
     for (const card of cards) {
-      const id = card.dataset.fragmentId;
+      const id = cardKey(card);
       if (id) rects.set(id, card.getBoundingClientRect());
     }
     return rects;
@@ -1212,7 +1244,7 @@ if (!getSession(Astro.request, process.env)) {
     // Force the new column widths before measuring the destination positions.
     void list.offsetWidth;
     for (const card of cards) {
-      const id = card.dataset.fragmentId;
+      const id = cardKey(card);
       const before = id ? oldRects.get(id) : undefined;
       if (!before) continue;
       const after = card.getBoundingClientRect();
@@ -2181,6 +2213,83 @@ if (!getSession(Astro.request, process.env)) {
     return card;
   }
 
+  function renderGroup(groupIdValue: string, fragments: Fragment[]): HTMLElement {
+    const group = document.createElement('section');
+    group.className = 'fragment-group';
+    group.dataset.groupId = groupIdValue;
+    const first = fragments[0];
+
+    if (!first) return group;
+
+    const multi = fragments.length > 1;
+    group.classList.toggle('is-collapsed', multi);
+    group.setAttribute('aria-label', `同页碎片，共 ${fragments.length} 条`);
+
+    const head = document.createElement('header');
+    head.className = 'fragment-group__head';
+
+    const identity = document.createElement('div');
+    identity.className = 'fragment-group__identity';
+
+    const mark = document.createElement('span');
+    mark.className = 'fragment-group__mark';
+    mark.textContent = `同页 · ${fragments.length} 条`;
+
+    const source: HTMLAnchorElement | HTMLSpanElement = first.sourceUrl
+      ? document.createElement('a')
+      : document.createElement('span');
+    source.className = 'fragment-group__source';
+    source.textContent = first.sourceTitle || first.sourceSite || '同页碎片';
+    if (source instanceof HTMLAnchorElement) {
+      source.href = first.sourceUrl;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+    }
+
+    identity.append(mark, source);
+
+    const actions = document.createElement('div');
+    actions.className = 'fragment-group__actions';
+
+    const selectButton = document.createElement('button');
+    selectButton.type = 'button';
+    selectButton.className = 'fragment-group__action';
+    selectButton.dataset.groupSelect = '';
+    selectButton.textContent = '选择整组';
+    selectButton.setAttribute('aria-label', '选择或取消选择本组全部碎片');
+    selectButton.setAttribute('aria-pressed', 'false');
+    selectButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      selectGroup(group);
+    });
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'fragment-group__action';
+    toggle.dataset.groupToggle = '';
+    toggle.hidden = !multi;
+    toggle.textContent = multi ? `展开 ${fragments.length} 条` : '收起';
+    toggle.setAttribute('aria-expanded', String(!multi));
+    toggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      const oldRects = captureCardRects(renderedCards);
+      const collapsed = group.classList.toggle('is-collapsed');
+      toggle.textContent = collapsed ? `展开 ${fragments.length} 条` : '收起';
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      layoutCards(renderedCards, { animate: true, oldRects });
+    });
+
+    actions.append(selectButton, toggle);
+    head.append(identity, actions);
+
+    const body = document.createElement('div');
+    body.className = 'fragment-group__body';
+    for (const fragment of fragments) body.append(render(fragment));
+
+    group.append(head, body);
+    return group;
+  }
+
   function render(fragment: Fragment): HTMLElement {
     if (fragment.kind === 'link') return renderLink(fragment);
     if (fragment.kind === 'image') {
@@ -2296,9 +2405,25 @@ if (!getSession(Astro.request, process.env)) {
           : 'Inbox 还是空的。用插件采集第一条，或者先用 API 写一条。';
         list.replaceChildren(empty);
       } else {
-        const cards: HTMLElement[] = [];
+        const groups = new Map<string, Fragment[]>();
         for (const fragment of fragments) {
           fragmentCache.set(fragment.id, fragment);
+          if (fragment.groupId) {
+            const members = groups.get(fragment.groupId) ?? [];
+            members.push(fragment);
+            groups.set(fragment.groupId, members);
+          }
+        }
+
+        const cards: HTMLElement[] = [];
+        const renderedGroups = new Set<string>();
+        for (const fragment of fragments) {
+          if (fragment.groupId) {
+            if (renderedGroups.has(fragment.groupId)) continue;
+            renderedGroups.add(fragment.groupId);
+            cards.push(renderGroup(fragment.groupId, groups.get(fragment.groupId) ?? [fragment]));
+            continue;
+          }
           cards.push(render(fragment));
         }
         renderedCards = cards;

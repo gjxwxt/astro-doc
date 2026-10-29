@@ -4,6 +4,9 @@ const TAG_PREFIX = 'josh-inbox-tag:';
 const NO_TAG_ID = 'josh-inbox-no-tag';
 const SAVE_LINK_ID = 'josh-inbox-save-link';
 const SAVE_IMAGE_ID = 'josh-inbox-save-image';
+const BATCH_START_ID = 'josh-inbox-batch-start';
+const BATCH_SCRIPT = 'batch.js';
+const BATCH_MAX_ITEMS = 50;
 
 async function config() {
   const stored = await chrome.storage.local.get(['baseUrl', 'token']);
@@ -55,6 +58,13 @@ async function rebuildMenus() {
     id: SAVE_IMAGE_ID,
     title: ready ? '保存图片到 Josh Inbox' : '保存图片（先配置 Token）',
     contexts: ['image'],
+    enabled: ready,
+  });
+
+  createMenu({
+    id: BATCH_START_ID,
+    title: ready ? '批量标注此页（多段一组）' : '批量标注（先配置 Token）',
+    contexts: ['page', 'selection'],
     enabled: ready,
   });
 
@@ -383,6 +393,114 @@ async function saveImage(info, tab) {
   }
 }
 
+function batchGroupId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `batch-${crypto.randomUUID()}`;
+  }
+  return `batch-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function startBatch(tab) {
+  const { baseUrl, token } = await config();
+  if (!token) {
+    await notify(tab?.id, '先在扩展设置里填入 Token。', 'error');
+    return;
+  }
+  if (!tab?.id) {
+    await flashBadge('!', '#b84f3e');
+    return;
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: [BATCH_SCRIPT],
+    });
+    const tags = await fetchTags(baseUrl, token);
+    await chrome.tabs.sendMessage(tab.id, {
+      type: 'josh-batch-open',
+      tags,
+    });
+  } catch {
+    await notify(tab.id, '这个页面不能批量标注，换一个普通网页试试。', 'error');
+  }
+}
+
+async function saveBatch(payload) {
+  const { baseUrl, token } = await config();
+  if (!token) return { ok: false, error: '先在扩展设置里填入 Token。' };
+  if (!baseUrl) return { ok: false, error: '没有配置门户地址。' };
+
+  const annotations = Array.isArray(payload?.annotations) ? payload.annotations : [];
+  if (annotations.length === 0) return { ok: false, error: '还没有加入任何选段。' };
+  if (annotations.length > BATCH_MAX_ITEMS) {
+    return { ok: false, error: `一次最多保存 ${BATCH_MAX_ITEMS} 段。` };
+  }
+
+  const tags = Array.isArray(payload?.tags)
+    ? payload.tags
+        .map((tag) => String(tag || '').trim())
+        .filter(Boolean)
+        .slice(0, 20)
+    : [];
+  const groupId = batchGroupId();
+  let saved = 0;
+  let duplicates = 0;
+  let failed = 0;
+
+  for (const item of annotations) {
+    const quote = String(item?.quote || '').trim().slice(0, 20_000);
+    const sourceUrl = String(item?.sourceUrl || '').trim();
+    if (!quote || !isHttpUrl(sourceUrl)) {
+      failed += 1;
+      continue;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/api/fragments`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          quote,
+          groupId,
+          sourceUrl,
+          sourceTitle: String(item?.sourceTitle || '').slice(0, 500),
+          sourceSite: String(item?.sourceSite || '').slice(0, 200),
+          contextBefore: String(item?.contextBefore || '').slice(0, 1_000),
+          contextAfter: String(item?.contextAfter || '').slice(0, 1_000),
+          tags,
+        }),
+      });
+
+      if (response.status === 401) {
+        return { ok: false, error: 'Token 无效或已过期，去扩展设置里更新。' };
+      }
+      if (response.status === 409) {
+        duplicates += 1;
+        continue;
+      }
+      if (!response.ok) {
+        failed += 1;
+        continue;
+      }
+      saved += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  return {
+    ok: saved > 0 || duplicates > 0,
+    saved,
+    duplicates,
+    failed,
+    groupId: saved > 0 ? groupId : '',
+  };
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   void rebuildMenus();
 });
@@ -401,6 +519,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     void saveImage(info, tab);
     return;
   }
+  if (menuId === BATCH_START_ID) {
+    void startBatch(tab);
+    return;
+  }
   if (menuId === PARENT_ID || menuId === 'josh-inbox-needs-config') return;
   if (menuId === NO_TAG_ID || menuId.startsWith(TAG_PREFIX)) {
     void saveSelection(info, tab);
@@ -412,6 +534,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     rebuildMenus()
       .then(() => sendResponse({ ok: true }))
       .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (message?.type === 'josh-batch-tags') {
+    config()
+      .then(({ baseUrl, token }) => fetchTags(baseUrl, token))
+      .then((tags) => sendResponse({ ok: true, tags }))
+      .catch(() => sendResponse({ ok: false, tags: [] }));
+    return true;
+  }
+  if (message?.type === 'josh-batch-save') {
+    saveBatch(message.payload)
+      .then((result) => sendResponse(result))
+      .catch(() => sendResponse({ ok: false, error: '保存失败，稍后再试。' }));
     return true;
   }
   return false;
