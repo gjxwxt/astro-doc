@@ -2406,6 +2406,16 @@ if (!getSession(Astro.request, process.env)) {
     deck.setAttribute('role', 'button');
     deck.setAttribute('aria-label', `查看整组全部 ${fragments.length} 条碎片`);
 
+    // Small groups can afford a wider fan; large groups need a tighter stack.
+    const visibleCount = Math.min(fragments.length, 4);
+    const baseSpread = Math.round(24 / Math.max(1, visibleCount - 1));
+    const spreadX = Math.max(4, Math.min(20, baseSpread - Math.max(0, fragments.length - 4)));
+    const spreadY = Math.round(spreadX * 0.72);
+    const tilt = -Math.max(0.2, 0.62 - fragments.length * 0.04);
+    deck.style.setProperty('--spread-x', `${spreadX}px`);
+    deck.style.setProperty('--spread-y', `${spreadY}px`);
+    deck.style.setProperty('--tilt', `${tilt}deg`);
+
     const shown = fragments.slice(0, 4);
     const sheets: HTMLElement[] = [];
     for (const [index, fragment] of shown.entries()) {

@@ -1260,7 +1260,7 @@
 .fragment-group__deck {
   position: relative;
   height: 210px;
-  margin: 12px 16px 14px;
+  margin: 12px 24px 14px;
   cursor: zoom-in;
   outline: none;
 }
@@ -1286,13 +1286,17 @@
   box-shadow:
     0 1px 0 color-mix(in oklab, var(--paper) 60%, transparent),
     0 8px 20px rgb(8 20 12 / 0.07);
-  opacity: calc(1 - var(--i) * 0.08);
-  transform: translate(calc(var(--i) * 9px), calc(var(--i) * 7px)) rotate(calc(var(--i) * -0.45deg));
+  opacity: calc(1 - var(--i) * 0.06);
+  transform: translate(
+      calc(var(--i) * var(--spread-x, 9px)),
+      calc(var(--i) * var(--spread-y, 7px))
+    )
+    rotate(calc(var(--i) * var(--tilt, -0.45deg)));
   transform-origin: 50% 100%;
   transition:
-    opacity 180ms ease,
-    transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    box-shadow 180ms ease;
+    opacity 160ms ease,
+    filter 160ms ease,
+    box-shadow 160ms ease;
   z-index: calc(20 - var(--i));
 }
 
@@ -1313,14 +1317,15 @@
 .group-sheet.is-active {
   box-shadow:
     0 1px 0 color-mix(in oklab, var(--paper) 60%, transparent),
-    0 12px 28px rgb(8 20 12 / 0.12);
+    0 16px 34px rgb(8 20 12 / 0.16);
+  filter: saturate(1.03);
   opacity: 1;
-  transform: translate(0, 0) scale(1.012) rotate(0deg);
   z-index: 30;
 }
 
 .fragment-group__deck:hover .group-sheet:not(.is-active) {
-  opacity: 0.32;
+  filter: saturate(0.72);
+  opacity: 0.28;
 }
 
 .group-sheet__quote {
@@ -1803,7 +1808,7 @@
 
   .fragment-group__deck {
     height: 188px;
-    margin: 10px 12px 12px;
+    margin: 10px 24px 12px;
   }
 
   .group-sheet {
