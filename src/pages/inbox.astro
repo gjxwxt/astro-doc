@@ -2082,7 +2082,7 @@ if (!getSession(Astro.request, process.env)) {
     if (!imageViewer.open) imageViewer.showModal();
   }
 
-  function renderReaderEntry(fragment: Fragment): HTMLElement {
+  function renderReaderEntry(fragment: Fragment, showMeta = true): HTMLElement {
     const entry = document.createElement('article');
     entry.className = 'reader-entry';
 
@@ -2133,21 +2133,23 @@ if (!getSession(Astro.request, process.env)) {
       entry.append(tags);
     }
 
-    const meta = document.createElement('div');
-    meta.className = 'reader-meta';
-    const time = document.createElement('time');
-    time.dateTime = fragment.capturedAt;
-    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
-    meta.append(time);
-    if (fragment.sourceUrl) {
-      const source = document.createElement('a');
-      source.href = fragment.sourceUrl;
-      source.target = '_blank';
-      source.rel = 'noopener noreferrer';
-      source.textContent = fragment.sourceTitle || fragment.sourceSite || '打开来源';
-      meta.append(source);
+    if (showMeta) {
+      const meta = document.createElement('div');
+      meta.className = 'reader-meta';
+      const time = document.createElement('time');
+      time.dateTime = fragment.capturedAt;
+      time.textContent = dateFormat.format(new Date(fragment.capturedAt));
+      meta.append(time);
+      if (fragment.sourceUrl) {
+        const source = document.createElement('a');
+        source.href = fragment.sourceUrl;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        source.textContent = fragment.sourceTitle || fragment.sourceSite || '打开来源';
+        meta.append(source);
+      }
+      entry.append(meta);
     }
-    entry.append(meta);
 
     return entry;
   }
@@ -2160,10 +2162,26 @@ if (!getSession(Astro.request, process.env)) {
     readerTitle.textContent =
       first.sourceTitle || first.sourceSite || (groupIdValue ? '同页碎片' : '碎片原文');
     readerBody.replaceChildren();
-    for (const fragment of fragments) readerBody.append(renderReaderEntry(fragment));
-    readerMeta.textContent = groupIdValue
-      ? `${fragments.length} 条同页碎片`
-      : `捕获于 ${dateFormat.format(new Date(first.capturedAt))}`;
+    readerBody.classList.toggle('reader-body--grid', Boolean(groupIdValue) && fragments.length > 1);
+    for (const fragment of fragments) {
+      readerBody.append(renderReaderEntry(fragment, !groupIdValue));
+    }
+    readerMeta.replaceChildren();
+    if (groupIdValue) {
+      const count = document.createElement('span');
+      count.textContent = `${fragments.length} 条同页碎片`;
+      readerMeta.append(count);
+      if (first.sourceUrl) {
+        const source = document.createElement('a');
+        source.href = first.sourceUrl;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        source.textContent = '打开来源';
+        readerMeta.append(' · ', source);
+      }
+    } else {
+      readerMeta.textContent = `捕获于 ${dateFormat.format(new Date(first.capturedAt))}`;
+    }
     readerSelect.hidden = !groupIdValue;
     readerSelect.textContent = '选择整组';
     if (!readerDialog.open) readerDialog.showModal();
@@ -2198,16 +2216,9 @@ if (!getSession(Astro.request, process.env)) {
     hint.className = 'image-view-hint';
     hint.textContent = '查看大图';
     frame.append(picture, hint);
+    frame.title = fragment.quote || image.alt || '查看大图';
     frame.addEventListener('click', () => openImageViewer(fragment, image));
     card.append(frame);
-
-    if (fragment.quote) {
-      const caption = document.createElement('p');
-      caption.className = 'image-caption';
-      caption.textContent = fragment.quote;
-      attachTextTooltip(caption, fragment.quote);
-      card.append(caption);
-    }
 
     if (fragment.note) {
       const note = document.createElement('p');
@@ -2227,21 +2238,19 @@ if (!getSession(Astro.request, process.env)) {
       card.append(tags);
     }
 
-    const meta = document.createElement('div');
-    meta.className = 'fragment-meta';
-    const time = document.createElement('time');
-    time.dateTime = fragment.capturedAt;
-    time.textContent = dateFormat.format(new Date(fragment.capturedAt));
-    meta.append(time);
-
-    const source = document.createElement('a');
-    source.href = fragment.sourceUrl || image.pageUrl || image.src;
-    source.target = '_blank';
-    source.rel = 'noopener noreferrer';
-    source.textContent =
-      fragment.sourceTitle || fragment.sourceSite || hostOf(source.href) || '来源';
-    meta.append(source);
-    card.append(meta);
+    const sourceHref = fragment.sourceUrl || image.pageUrl || image.src;
+    const sourceLine = document.createElement(sourceHref ? 'a' : 'span');
+    sourceLine.className = 'image-source-line';
+    const sourceLabel =
+      fragment.sourceTitle || fragment.sourceSite || hostOf(sourceHref) || '来源';
+    sourceLine.textContent = `${dateFormat.format(new Date(fragment.capturedAt))} · ${sourceLabel}`;
+    sourceLine.title = sourceHref ? '打开来源' : '';
+    if (sourceLine instanceof HTMLAnchorElement) {
+      sourceLine.href = sourceHref;
+      sourceLine.target = '_blank';
+      sourceLine.rel = 'noopener noreferrer';
+    }
+    card.append(sourceLine);
 
     card.append(renderActions(card, fragment));
     attachCardSelection(card, fragment);
@@ -2378,6 +2387,66 @@ if (!getSession(Astro.request, process.env)) {
     return card;
   }
 
+  function renderGroupDeck(fragments: Fragment[], groupIdValue: string): HTMLElement {
+    const deck = document.createElement('div');
+    deck.className = 'fragment-group__deck';
+    deck.dataset.groupDeck = '';
+    deck.tabIndex = 0;
+    deck.setAttribute('role', 'button');
+    deck.setAttribute('aria-label', `查看整组全部 ${fragments.length} 条碎片`);
+
+    const shown = fragments.slice(0, 4);
+    const sheets: HTMLElement[] = [];
+    for (const [index, fragment] of shown.entries()) {
+      const sheet = document.createElement('div');
+      sheet.className = 'group-sheet';
+      sheet.dataset.index = String(index);
+      sheet.style.setProperty('--i', String(index));
+
+      const quote = document.createElement('span');
+      quote.className = 'group-sheet__quote';
+      quote.textContent = (fragment.quote || '空碎片').replace(/\s+/g, ' ').slice(0, 180);
+
+      const label = document.createElement('span');
+      label.className = 'group-sheet__label';
+      label.textContent = `${String(index + 1).padStart(2, '0')} / ${fragments.length}`;
+
+      sheet.append(quote, label);
+      deck.append(sheet);
+      sheets.push(sheet);
+    }
+
+    if (fragments.length > shown.length) {
+      const more = document.createElement('span');
+      more.className = 'group-sheet-more';
+      more.textContent = `还有 ${fragments.length - shown.length} 条`;
+      deck.append(more);
+    }
+
+    const setActive = (index: number): void => {
+      const next = Math.max(0, Math.min(sheets.length - 1, index));
+      deck.dataset.active = String(next);
+      sheets.forEach((sheet, i) => sheet.classList.toggle('is-active', i === next));
+    };
+    setActive(0);
+
+    deck.addEventListener('pointermove', (event) => {
+      const rect = deck.getBoundingClientRect();
+      if (!rect.width) return;
+      const ratio = Math.max(0, Math.min(0.9999, (event.clientX - rect.left) / rect.width));
+      setActive(Math.floor(ratio * sheets.length));
+    });
+    deck.addEventListener('pointerleave', () => setActive(0));
+    deck.addEventListener('click', () => openReader(fragments, groupIdValue));
+    deck.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openReader(fragments, groupIdValue);
+    });
+
+    return deck;
+  }
+
   function renderGroup(groupIdValue: string, fragments: Fragment[]): HTMLElement {
     const group = document.createElement('section');
     group.className = 'fragment-group';
@@ -2387,7 +2456,7 @@ if (!getSession(Astro.request, process.env)) {
     if (!first) return group;
 
     const multi = fragments.length > 1;
-    group.classList.toggle('is-collapsed', multi);
+    group.classList.toggle('is-expanded', !multi);
     group.setAttribute('aria-label', `同页碎片，共 ${fragments.length} 条`);
 
     const head = document.createElement('header');
@@ -2411,7 +2480,12 @@ if (!getSession(Astro.request, process.env)) {
       source.rel = 'noopener noreferrer';
     }
 
-    identity.append(mark, source);
+    const date = document.createElement('time');
+    date.className = 'fragment-group__date';
+    date.dateTime = first.capturedAt;
+    date.textContent = dateFormat.format(new Date(first.capturedAt));
+
+    identity.append(mark, source, date);
 
     const actions = document.createElement('div');
     actions.className = 'fragment-group__actions';
@@ -2449,20 +2523,23 @@ if (!getSession(Astro.request, process.env)) {
     toggle.addEventListener('click', (event) => {
       event.preventDefault();
       const oldRects = captureCardRects(renderedCards);
-      const collapsed = group.classList.toggle('is-collapsed');
-      toggle.textContent = collapsed ? `展开 ${fragments.length} 条` : '收起';
-      toggle.setAttribute('aria-expanded', String(!collapsed));
+      const expanded = group.classList.toggle('is-expanded');
+      toggle.textContent = expanded ? '收起' : `展开 ${fragments.length} 条`;
+      toggle.setAttribute('aria-expanded', String(expanded));
       layoutCards(renderedCards, { animate: true, oldRects });
     });
 
     actions.append(viewButton, selectButton, toggle);
     head.append(identity, actions);
 
+    const deck = multi ? renderGroupDeck(fragments, groupIdValue) : null;
     const body = document.createElement('div');
     body.className = 'fragment-group__body';
     for (const fragment of fragments) body.append(render(fragment));
 
-    group.append(head, body);
+    group.append(head);
+    if (deck) group.append(deck);
+    group.append(body);
     return group;
   }
 
