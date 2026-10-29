@@ -2287,6 +2287,17 @@ if (!getSession(Astro.request, process.env)) {
       image.decoding = 'async';
       image.referrerPolicy = 'no-referrer';
       image.addEventListener('error', () => image.remove());
+      image.title = '查看大图';
+      image.style.cursor = 'zoom-in';
+      image.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openImageViewer(fragment, {
+          src: preview.image,
+          alt: '',
+          pageUrl: fragment.sourceUrl,
+        } as ImageMetadata);
+      });
       link.append(image);
     } else {
       const mark = document.createElement('span');
