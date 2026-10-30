@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { openDatabase } from '@/lib/db/client';
-import { createMedia, getMediaByHash } from '@/lib/db/media';
+import { createMedia, getMediaByHash, listMedia } from '@/lib/db/media';
 import {
   MAX_MEDIA_BYTES,
   detectImageType,
@@ -93,6 +93,26 @@ describe('media storage and database', () => {
       expect(second.deduped).toBe(true);
       expect(second.media.id).toBe(first.media.id);
       expect(getMediaByHash(db, 'local', hash)?.id).toBe(first.media.id);
+
+      const otherHash = sha256(jpeg);
+      const otherKey = mediaKey(otherHash, 'jpg');
+      createMedia(db, 'local', {
+        hash: otherHash,
+        mime: 'image/jpeg',
+        ext: 'jpg',
+        bytes: jpeg.byteLength,
+        originalName: 'second.jpg',
+        storageKey: otherKey,
+        publicUrl: `/media/${otherKey}`,
+      });
+
+      const list = listMedia(db, 'local', { limit: 1 });
+      expect(list.total).toBe(2);
+      expect(list.totalBytes).toBe(png.byteLength + jpeg.byteLength);
+      expect(list.media).toHaveLength(1);
+      const all = listMedia(db, 'local', { limit: 10 }).media.map((item) => item.originalName);
+      expect(all).toContain('second.jpg');
+      expect(listMedia(db, 'local', { limit: 10, offset: 1 }).media).toHaveLength(1);
     } finally {
       db.close();
     }

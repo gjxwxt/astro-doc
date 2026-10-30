@@ -84,6 +84,43 @@ export function getMediaByHash(db: DatabaseSync, ownerId: string, hash: string):
   return row ? toMedia(row) : null;
 }
 
+export interface ListMediaOptions {
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListMediaResult {
+  media: MediaRecord[];
+  total: number;
+  totalBytes: number;
+}
+
+export function listMedia(
+  db: DatabaseSync,
+  ownerId: string,
+  options: ListMediaOptions = {},
+): ListMediaResult {
+  const limit = Math.min(200, Math.max(1, Math.trunc(options.limit ?? 60)));
+  const offset = Math.max(0, Math.trunc(options.offset ?? 0));
+  const stats = db
+    .prepare(
+      'SELECT COUNT(*) AS total, COALESCE(SUM(bytes), 0) AS total_bytes FROM media WHERE owner_id = ? AND deleted_at IS NULL',
+    )
+    .get(ownerId) as { total: number; total_bytes: number | bigint };
+
+  const rows = db
+    .prepare(
+      `${SELECT} WHERE owner_id = ? AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+    )
+    .all(ownerId, limit, offset) as unknown as MediaRow[];
+
+  return {
+    media: rows.map(toMedia),
+    total: Number(stats.total),
+    totalBytes: Number(stats.total_bytes),
+  };
+}
+
 export function createMedia(
   db: DatabaseSync,
   ownerId: string,
