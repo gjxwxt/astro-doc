@@ -44,6 +44,30 @@ AI_ENABLED=0
 
 这样公开助手、整理台和合成都会直接走规则/检索，不会卡在超时上。网络恢复后改回 `1` 并重启。
 
+### Cloudflare Worker 中转
+
+服务器无法直连 Gemini 时，用 Cloudflare Worker 做固定路径代理：
+
+```text
+Josh 服务器 → https://ai.gaojiaxiang.cn/v1/chat/completions
+            → Cloudflare Worker
+            → generativelanguage.googleapis.com
+```
+
+Worker 只接受带 `PROXY_TOKEN` 的 `POST /chat/completions`，并自己注入 `GEMINI_API_KEY`。完整代码和部署说明见 `infra/cloudflare-ai-proxy/`。
+
+服务器配置：
+
+```env
+AI_ENABLED=1
+AI_BASE_URL=https://ai.gaojiaxiang.cn/v1
+AI_API_KEY=<PROXY_TOKEN>
+AI_MODEL=gemini-3.8-flash
+AI_REASONING_EFFORT=low
+```
+
+服务器不再保存 `GEMINI_API_KEY`。`AI_REASONING_EFFORT=low` 在 Gemini 上比关闭 reasoning 慢一些，但输出更完整。
+
 ## API
 
 单条建议：
