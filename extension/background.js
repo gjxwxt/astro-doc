@@ -5,6 +5,7 @@ const NO_TAG_ID = 'josh-inbox-no-tag';
 const SAVE_LINK_ID = 'josh-inbox-save-link';
 const SAVE_IMAGE_ID = 'josh-inbox-save-image';
 const BATCH_START_ID = 'josh-inbox-batch-start';
+const PAGE_EXPLODE_ID = 'josh-inbox-page-explode';
 const BATCH_SCRIPT = 'batch.js';
 const BATCH_MAX_ITEMS = 50;
 
@@ -64,6 +65,13 @@ async function rebuildMenus() {
   createMenu({
     id: BATCH_START_ID,
     title: ready ? '批量标注此页（多段一组）' : '批量标注（先配置 Token）',
+    contexts: ['page', 'selection'],
+    enabled: ready,
+  });
+
+  createMenu({
+    id: PAGE_EXPLODE_ID,
+    title: ready ? '页面大爆炸（预览后保存）' : '页面大爆炸（先配置 Token）',
     contexts: ['page', 'selection'],
     enabled: ready,
   });
@@ -501,6 +509,95 @@ async function saveBatch(payload) {
   };
 }
 
+async function startPageExplosion(tab) {
+  const { token } = await config();
+  if (!token) {
+    await notify(tab?.id, '先在扩展设置里填入 Token。', 'error');
+    return;
+  }
+  if (!tab?.id) {
+    await flashBadge('!', '#b84f3e');
+    return;
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['explosion.bundle.js'],
+    });
+  } catch {
+    await notify(tab.id, '这个页面不能打开页面大爆炸，换一个普通网页试试。', 'error');
+  }
+}
+
+async function savePageAnnotations(payload) {
+  const { baseUrl, token } = await config();
+  if (!token) return { ok: false, error: '先在扩展设置里填入 Token。' };
+  if (!baseUrl) return { ok: false, error: '没有配置门户地址。' };
+
+  const page = payload?.page && typeof payload.page === 'object' ? payload.page : {};
+  const annotations = Array.isArray(payload?.annotations) ? payload.annotations.slice(0, 100) : [];
+  if (annotations.length === 0) return { ok: false, error: '还没有选中段落。' };
+
+  const tags = Array.isArray(payload?.tags)
+    ? payload.tags.map((tag) => String(tag || '').trim()).filter(Boolean).slice(0, 20)
+    : [];
+  const groupId = batchGroupId();
+  let saved = 0;
+  let duplicates = 0;
+  let failed = 0;
+
+  for (const item of annotations) {
+    const quote = String(item?.quote || '').trim().slice(0, 20_000);
+    const sourceUrl = String(item?.sourceUrl || page.url || '').trim();
+    if (!quote || !isHttpUrl(sourceUrl)) {
+      failed += 1;
+      continue;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/api/fragments`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          quote,
+          groupId,
+          sourceUrl,
+          sourceTitle: String(item?.sourceTitle || page.title || '').slice(0, 500),
+          sourceSite: String(item?.sourceSite || page.site || '').slice(0, 200),
+          tags,
+        }),
+      });
+
+      if (response.status === 401) {
+        return { ok: false, error: 'Token 无效或已过期，去扩展设置里更新。' };
+      }
+      if (response.status === 409) {
+        duplicates += 1;
+        continue;
+      }
+      if (!response.ok) {
+        failed += 1;
+        continue;
+      }
+      saved += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  return {
+    ok: saved > 0 || duplicates > 0,
+    saved,
+    duplicates,
+    failed,
+    groupId: saved > 0 ? groupId : '',
+  };
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   void rebuildMenus();
 });
@@ -523,6 +620,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     void startBatch(tab);
     return;
   }
+  if (menuId === PAGE_EXPLODE_ID) {
+    void startPageExplosion(tab);
+    return;
+  }
   if (menuId === PARENT_ID || menuId === 'josh-inbox-needs-config') return;
   if (menuId === NO_TAG_ID || menuId.startsWith(TAG_PREFIX)) {
     void saveSelection(info, tab);
@@ -534,6 +635,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     rebuildMenus()
       .then(() => sendResponse({ ok: true }))
       .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (message?.type === 'josh-page-save') {
+    savePageAnnotations(message.payload)
+      .then((result) => sendResponse(result))
+      .catch(() => sendResponse({ ok: false, error: '保存失败，稍后再试。' }));
     return true;
   }
   if (message?.type === 'josh-batch-tags') {
