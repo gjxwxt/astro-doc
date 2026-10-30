@@ -27,10 +27,15 @@ const MAX_BYTES = 20 * 1024 * 1024;
 const DEFAULT_SETTINGS = {
   portalUrl: 'http://127.0.0.1:4400',
   publicBaseUrl: '',
+  legacyBaseUrls: [],
+  backupBeforeRewrite: true,
   token: '',
   pasteImages: true,
   pastePaths: true,
 };
+
+const MEDIA_PATH_RE = /^(?:\/[^/]+)*\/media\/[a-f0-9]{64}\.(?:png|jpe?g|webp|gif|avif)$/i;
+const MEDIA_URL_RE = /https?:\/\/[^\s)\]"'<>]+/gi;
 
 function trimBase(value) {
   return String(value || '').trim().replace(/\/+$/, '');
@@ -72,6 +77,42 @@ function joinUrl(base, maybeRelative) {
   if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
   const root = trimBase(base);
   return `${root}${maybeRelative.startsWith('/') ? '' : '/'}${maybeRelative}`;
+}
+
+function parseBaseList(value) {
+  const lines = Array.isArray(value) ? value : String(value || '').split(/\r?\n/);
+  return [...new Set(lines.map(trimBase).filter(Boolean))];
+}
+
+function isJoshMediaPath(pathname) {
+  return MEDIA_PATH_RE.test(pathname);
+}
+
+function rewriteMediaUrl(rawUrl, oldBases, newBase) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (!isJoshMediaPath(url.pathname)) return null;
+
+  for (const rawBase of oldBases) {
+    let oldBase;
+    try {
+      oldBase = new URL(trimBase(rawBase));
+    } catch {
+      continue;
+    }
+    if (oldBase.origin !== url.origin) continue;
+    const prefix = oldBase.pathname.replace(/\/+$/, '');
+    if (prefix && !url.pathname.startsWith(`${prefix}/media/`)) continue;
+    if (!prefix && !url.pathname.startsWith('/media/')) continue;
+    const suffix = `${url.pathname.slice(prefix.length)}${url.search}${url.hash}`;
+    const next = `${trimBase(newBase)}${suffix}`;
+    return next === rawUrl ? null : next;
+  }
+  return null;
 }
 
 async function responseError(response) {
@@ -121,6 +162,30 @@ class JoshMediaSettingTab extends PluginSettingTab {
             this.plugin.settings.publicBaseUrl = trimBase(value);
             await this.plugin.saveSettings();
           }),
+      );
+
+    new Setting(containerEl)
+      .setName('旧图片地址')
+      .setDesc('每行一个旧前缀，例如 http://127.0.0.1:4400 或 https://旧的服务器地址。只重写 /media/<hash> 图片地址。')
+      .addTextArea((area) => {
+        area.inputEl.rows = 4;
+        area
+          .setPlaceholder('http://127.0.0.1:4400\nhttps://old.example.com')
+          .setValue((this.plugin.settings.legacyBaseUrls || []).join('\n'))
+          .onChange(async (value) => {
+            this.plugin.settings.legacyBaseUrls = parseBaseList(value);
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName('重写前备份')
+      .setDesc('把修改前的 Markdown 备份到 vault 的 .josh-media-backup/<时间>/。')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.backupBeforeRewrite).onChange(async (value) => {
+          this.plugin.settings.backupBeforeRewrite = value;
+          await this.plugin.saveSettings();
+        }),
       );
 
     new Setting(containerEl)
@@ -203,6 +268,18 @@ module.exports = class JoshMediaPlugin extends Plugin {
           new Notice(`上传失败：${error instanceof Error ? error.message : String(error)}`);
         }
       },
+    });
+
+    this.addCommand({
+      id: 'check-josh-media-base',
+      name: '检查 Josh 媒体地址',
+      callback: () => void this.rewriteMediaBase(true),
+    });
+
+    this.addCommand({
+      id: 'rewrite-josh-media-base',
+      name: '重写 Josh 媒体地址',
+      callback: () => void this.rewriteMediaBase(false),
     });
   }
 
@@ -312,4 +389,105 @@ module.exports = class JoshMediaPlugin extends Plugin {
     const publicBase = trimBase(settings.publicBaseUrl || settings.portalUrl);
     return joinUrl(publicBase, payload.data.url);
   }
+
+  async collectMediaRewritePlan() {
+    const oldBases = parseBaseList(this.settings.legacyBaseUrls);
+    const newBase = trimBase(this.settings.publicBaseUrl || this.settings.portalUrl);
+    if (oldBases.length === 0) throw new Error('请先在设置里填写「旧图片地址」');
+    if (!newBase) throw new Error('请先填写「图片公开地址」或「门户地址」');
+
+    const plan = [];
+    let total = 0;
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const content = await this.app.vault.read(file);
+      let count = 0;
+      const next = content.replace(MEDIA_URL_RE, (match) => {
+        const rewritten = rewriteMediaUrl(match, oldBases, newBase);
+        if (!rewritten) return match;
+        count += 1;
+        return rewritten;
+      });
+      if (count > 0) {
+        plan.push({ file, content, next, count });
+        total += count;
+      }
+    }
+    return { plan, total, oldBases, newBase };
+  }
+
+  async ensureFolder(folderPath) {
+    const parts = normalizePath(folderPath).split('/');
+    for (let i = 1; i <= parts.length; i += 1) {
+      const current = parts.slice(0, i).join('/');
+      try {
+        await this.app.vault.adapter.mkdir(current);
+      } catch {
+        // mkdir is not idempotent in every adapter; ignore existing folders.
+      }
+    }
+  }
+
+  async backupMediaFile(file, content, backupRoot) {
+    const target = normalizePath(`${backupRoot}/${file.path}`);
+    await this.ensureFolder(target.split('/').slice(0, -1).join('/'));
+    await this.app.vault.adapter.write(target, content);
+  }
+
+  async rewriteMediaBase(dryRun) {
+    let result;
+    try {
+      result = await this.collectMediaRewritePlan();
+    } catch (error) {
+      new Notice(`Josh：${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+
+    const { plan, total, oldBases, newBase } = result;
+    if (plan.length === 0) {
+      new Notice(`Josh：没有找到可重写的媒体地址（当前前缀 ${newBase}）`);
+      return;
+    }
+
+    const fileCount = plan.length;
+    if (dryRun) {
+      new Notice(`Josh：将修改 ${fileCount} 篇笔记、${total} 个图片地址 → ${newBase}\n旧地址：${oldBases.join(', ')}`, 8000);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `将修改 ${fileCount} 篇笔记、${total} 个 Josh 图片地址。\n\n` +
+        `旧地址：\n${oldBases.join('\n')}\n\n新地址：\n${newBase}\n\n继续？`,
+    );
+    if (!confirmed) return;
+
+    const backupRoot = `.josh-media-backup/${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    let changedFiles = 0;
+    let changedLinks = 0;
+    const failures = [];
+
+    for (const item of plan) {
+      try {
+        if (this.settings.backupBeforeRewrite) {
+          await this.backupMediaFile(item.file, item.content, backupRoot);
+        }
+        await this.app.vault.modify(item.file, item.next);
+        changedFiles += 1;
+        changedLinks += item.count;
+      } catch (error) {
+        failures.push(`${item.file.path}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    const backupNote = this.settings.backupBeforeRewrite ? `；备份：${backupRoot}` : '';
+    if (failures.length === 0) {
+      new Notice(`Josh：已重写 ${changedFiles} 篇、${changedLinks} 个图片地址${backupNote}`, 8000);
+    } else {
+      new Notice(
+        `Josh：重写 ${changedFiles} 篇、${changedLinks} 个地址；${failures.length} 篇失败${backupNote}\n${failures.slice(0, 3).join('\n')}`,
+        12000,
+      );
+    }
+  }
 };
+
+module.exports._test = { parseBaseList, rewriteMediaUrl, isJoshMediaPath };

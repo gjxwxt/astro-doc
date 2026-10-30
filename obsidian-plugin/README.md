@@ -22,11 +22,30 @@ pnpm media:migrate --vault ~/Documents/Obsidian
 
 ## 设置
 
-- **门户地址**：`http://127.0.0.1:4400` 或你的服务器地址
-- **图片公开地址**：写进 Markdown 的绝对前缀；留空则用门户地址
+- **门户地址**：`https://docs.gaojiaxiang.cn` 或你的服务器地址
+- **图片公开地址**：写进 Markdown 的稳定前缀，例如 `https://media.gaojiaxiang.cn`
+- **旧图片地址**：每行一个旧前缀，用来批量重写文章里的旧图片地址
+- **重写前备份**：改前备份到 `.josh-media-backup/<时间>/`
 - **私有 API Token**：服务端 `.env` 的 `PRIVATE_API_TOKEN`
 - **粘贴图片自动上传**：剪贴板里的图片文件
 - **粘贴图片地址/路径自动上传**：单行、以图片扩展名结尾的 http(s) 地址或本地路径
+
+## 批量重写媒体地址
+
+服务器换地址/换域名后，不用手动改文章。
+
+1. 在设置里填好当前「图片公开地址」
+2. 在「旧图片地址」里每行填一个旧前缀，例如：
+
+```text
+http://127.0.0.1:4400
+https://old.example.com
+```
+
+3. 命令面板执行 **「Josh Media: 检查 Josh 媒体地址」**，先看会改多少篇
+4. 确认后执行 **「Josh Media: 重写 Josh 媒体地址」**
+
+只会匹配 `/media/<64位hash>.<png|jpg|jpeg|webp|gif|avif>`，不会动其他远程图片。默认会先备份到 vault 的 `.josh-media-backup/`。
 
 手机端需要图片公开地址是手机能访问的地址；当前插件标记为桌面端。
 
