@@ -51,6 +51,7 @@ https://old.example.com
 
 ## 行为
 
+- 粘贴后立即在光标处插入 `⏳ 正在上传图片…` 占位符，上传完成再替换成 Markdown
 - 剪贴板图片 → `POST /api/media/upload` → `![alt](url)`
 - `https://.../x.png` → 下载 → 上传 → `![x](url)`
 - `/Users/.../x.png` 或 vault 内相对路径 → 读取 → 上传 → `![x](url)`

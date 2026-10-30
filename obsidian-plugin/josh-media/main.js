@@ -88,6 +88,28 @@ function isJoshMediaPath(pathname) {
   return MEDIA_PATH_RE.test(pathname);
 }
 
+let uploadPlaceholderCounter = 0;
+
+function makeUploadPlaceholder() {
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${++uploadPlaceholderCounter}`;
+  return `⏳ 正在上传图片…<!--josh-upload:${id}-->`;
+}
+
+function replaceUploadPlaceholder(editor, placeholder, replacement) {
+  const source = editor.getValue();
+  const start = source.indexOf(placeholder);
+  if (start < 0) return false;
+  editor.replaceRange(
+    replacement,
+    editor.offsetToPos(start),
+    editor.offsetToPos(start + placeholder.length),
+  );
+  return true;
+}
+
 function rewriteMediaUrl(rawUrl, oldBases, newBase) {
   let url;
   try {
@@ -261,10 +283,17 @@ module.exports = class JoshMediaPlugin extends Plugin {
       editorCallback: async (editor) => {
         const value = window.prompt('图片地址或本地路径');
         if (!value) return;
+        const placeholder = makeUploadPlaceholder();
+        editor.replaceSelection(placeholder);
         try {
           const markdown = await this.uploadPathOrUrl(value.trim());
-          editor.replaceSelection(markdown);
+          if (!replaceUploadPlaceholder(editor, placeholder, markdown)) {
+            editor.replaceSelection(markdown);
+          }
         } catch (error) {
+          if (!replaceUploadPlaceholder(editor, placeholder, '')) {
+            editor.replaceSelection(value.trim());
+          }
           new Notice(`上传失败：${error instanceof Error ? error.message : String(error)}`);
         }
       },
@@ -311,28 +340,43 @@ module.exports = class JoshMediaPlugin extends Plugin {
 
     event.preventDefault();
     event.stopPropagation();
+    const placeholder = makeUploadPlaceholder();
+    editor.replaceSelection(placeholder);
     try {
       const markdown = await this.uploadPathOrUrl(text);
-      editor.replaceSelection(markdown);
+      if (!replaceUploadPlaceholder(editor, placeholder, markdown)) {
+        editor.replaceSelection(markdown);
+      }
     } catch (error) {
-      editor.replaceSelection(text);
+      if (!replaceUploadPlaceholder(editor, placeholder, text)) {
+        editor.replaceSelection(text);
+      }
       new Notice(`Josh 上传失败，已保留原文本：${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async uploadFiles(files, editor) {
-    const markdown = [];
-    for (const file of files) {
+    const pending = files.map((file) => ({ file, placeholder: makeUploadPlaceholder() }));
+    editor.replaceSelection(pending.map((item) => item.placeholder).join('\n'));
+
+    for (const item of pending) {
       try {
-        if (file.size > MAX_BYTES) throw new Error('图片超过 20MB');
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const url = await this.uploadBytes(bytes, file.name || 'image.png', file.type || mimeOf(file.name));
-        markdown.push(`![${altFromName(file.name)}](${url})`);
+        if (item.file.size > MAX_BYTES) throw new Error('图片超过 20MB');
+        const bytes = new Uint8Array(await item.file.arrayBuffer());
+        const url = await this.uploadBytes(
+          bytes,
+          item.file.name || 'image.png',
+          item.file.type || mimeOf(item.file.name),
+        );
+        const markdown = `![${altFromName(item.file.name)}](${url})`;
+        if (!replaceUploadPlaceholder(editor, item.placeholder, markdown)) {
+          editor.replaceSelection(markdown);
+        }
       } catch (error) {
+        replaceUploadPlaceholder(editor, item.placeholder, '');
         new Notice(`Josh 上传失败：${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    if (markdown.length > 0) editor.replaceSelection(markdown.join('\n'));
   }
 
   async uploadPathOrUrl(value) {
