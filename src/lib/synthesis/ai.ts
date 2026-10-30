@@ -25,6 +25,7 @@ function reasoningEffort(value: string | undefined): AiRuntime['reasoningEffort'
 export function aiRuntime(
   env: Record<string, string | undefined> = process.env,
 ): AiRuntime | null {
+  if (env.AI_ENABLED === '0') return null;
   const apiKey = env.AI_API_KEY?.trim() || env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
   return {

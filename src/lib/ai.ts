@@ -46,6 +46,7 @@ function parseReasoningEffort(value: string | undefined): ReasoningEffort | unde
 }
 
 function config(env: Record<string, string | undefined>): AiConfig | null {
+  if (env.AI_ENABLED === '0') return null;
   const apiKey = env.AI_API_KEY?.trim() || env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
   return {

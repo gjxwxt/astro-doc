@@ -1,0 +1,458 @@
+---
+import PortalLayout from '@/layouts/PortalLayout.astro';
+import { getDatabase } from '@/lib/db/client';
+import { listFragments, listTags } from '@/lib/db/fragments';
+import type { DuplicateSuggestion, OrganizeSuggestion } from '@/lib/organize';
+import { organizeRules } from '@/lib/organize';
+import { getSession } from '@/lib/private-auth';
+import { getReviewStats, reviewRules } from '@/lib/review';
+import '@/styles/private.css';
+
+export const prerender = false;
+
+Astro.response.headers.set('cache-control', 'no-store');
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+
+const session = getSession(Astro.request, process.env);
+if (!session) {
+  return Astro.redirect(`/login?next=${encodeURIComponent(Astro.url.pathname)}`);
+}
+
+const db = getDatabase();
+const allFragments = listFragments(db, session.sub, { limit: 250 }).fragments;
+const knownTags = listTags(db, session.sub);
+const pending = allFragments.filter((fragment) => fragment.status === 'inbox').slice(0, 12);
+const suggestions = new Map<string, OrganizeSuggestion>(
+  pending.map((fragment) => [
+    fragment.id,
+    organizeRules({ fragment, candidates: allFragments, knownTags }),
+  ]),
+);
+const stats = getReviewStats(db, session.sub);
+const reviewText = reviewRules(stats);
+const aiConfigured = Boolean(process.env.AI_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim());
+const aiEnabled = aiConfigured && process.env.AI_ENABLED !== '0';
+const maxDay = Math.max(1, ...stats.byDay.map((day) => day.count));
+const kindLabels: Record<string, string> = {
+  quote: '摘录',
+  link: '链接',
+  image: '图片',
+};
+
+function formatDay(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', timeZone: 'UTC' }).format(
+    date,
+  );
+}
+
+function quoteOf(duplicate: DuplicateSuggestion): string {
+  return duplicate.quote || '无标题碎片';
+}
+---
+
+<PortalLayout title="整理台" noindex bare private bodyClass="private-body">
+  <header class="private-bar">
+    <a class="private-brand" href="/">Josh</a>
+    <nav aria-label="私有导航">
+      <a href="/inbox">Inbox</a>
+      <a href="/drafts">Drafts</a>
+      <a href="/media">媒体</a>
+      <a href="/organize" aria-current="page">整理</a>
+      <a href="/">回到门户</a>
+      <button class="fragment-delete" type="button" data-logout>退出</button>
+    </nav>
+  </header>
+
+  <main class="private-shell organize-shell">
+    <header class="private-head organize-head">
+      <div>
+        <p class="private-eyebrow">Private workspace</p>
+        <h1>Triage</h1>
+        <p>先看这一周发生了什么，再逐条把值得留下的碎片整理好。AI 只给建议，不会自动改你的标签和备注。</p>
+      </div>
+      <div class="organize-stats" aria-label="本周统计">
+        <div class="organize-stat">
+          <strong>{stats.weekTotal}</strong>
+          <span>本周新增</span>
+        </div>
+        <div class="organize-stat">
+          <strong>{stats.inbox}</strong>
+          <span>待整理</span>
+        </div>
+        <div class="organize-stat">
+          <strong>{stats.archived}</strong>
+          <span>已归档</span>
+        </div>
+        <div class="organize-stat">
+          <strong>{stats.media}</strong>
+          <span>媒体</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="organize-review" aria-labelledby="review-title">
+      <div class="organize-review-head">
+        <div>
+          <p class="private-eyebrow">Weekly review</p>
+          <h2 id="review-title">本周回顾</h2>
+        </div>
+        <div class="organize-review-actions">
+          <span class="organize-mode" data-review-mode>规则模式</span>
+          <button
+            class="private-button private-button--small"
+            type="button"
+            data-review-generate
+            disabled={!aiEnabled}
+          >
+            AI 复盘
+          </button>
+        </div>
+      </div>
+
+      <div class="organize-review-body">
+        <p class="organize-review-text" data-review-text>{reviewText}</p>
+        <div class="organize-review-side">
+          <div class="organize-spark" aria-label="近七天新增">
+            {stats.byDay.map((day) => (
+              <span
+                style={`--bar: ${Math.max(8, (day.count / maxDay) * 100)}%`}
+                title={`${formatDay(day.date)} · ${day.count} 条`}
+              >
+                <i />
+                <small>{formatDay(day.date)}</small>
+              </span>
+            ))}
+          </div>
+          <div class="organize-chip-row" aria-label="本周高频标签">
+            {stats.topTags.length === 0 ? (
+              <span class="organize-muted">本周还没有标签</span>
+            ) : (
+              stats.topTags.slice(0, 5).map((tag) => (
+                <span class="organize-chip">#{tag.label} <small>{tag.count}</small></span>
+              ))
+            )}
+          </div>
+          <p class="organize-note" data-review-note>
+            {aiEnabled
+              ? 'AI 可用，点击生成一段更具体的回顾。'
+              : aiConfigured
+                ? 'AI 已配置，但当前未启用；先使用规则回顾。'
+                : '未配置 AI key，当前使用规则回顾。'}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="organize-pending" aria-labelledby="pending-title">
+      <div class="organize-section-head">
+        <div>
+          <p class="private-eyebrow">Inbox</p>
+          <h2 id="pending-title">待整理 <span>{stats.inbox}</span></h2>
+        </div>
+        <p>建议先处理最近 12 条。应用标签只会追加，不会覆盖已有标签。</p>
+      </div>
+
+      {
+        pending.length === 0 ? (
+          <div class="organize-empty">
+            <p class="private-eyebrow">All clear</p>
+            <h2>收件箱已经空了</h2>
+            <p>去 <a href="/inbox">Inbox</a> 看看已归档的内容，或者去 <a href="/media">媒体</a> 补一张图。</p>
+          </div>
+        ) : (
+          <div class="organize-list">
+            {pending.map((fragment) => {
+              const suggestion = suggestions.get(fragment.id)!;
+              return (
+                <article class="organize-item" data-organize-item data-id={fragment.id}>
+                  <div class="organize-item-main">
+                    <div class="organize-item-meta">
+                      <span>{kindLabels[fragment.kind] ?? fragment.kind}</span>
+                      <span>{new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(new Date(fragment.capturedAt))}</span>
+                      <span>{fragment.sourceSite || fragment.sourceTitle || '私人收藏'}</span>
+                    </div>
+                    <blockquote class="organize-quote">
+                      {fragment.quote || fragment.sourceTitle || '（没有文字，只有一条收藏）'}
+                    </blockquote>
+                    <div class="organize-current" data-current-tags>
+                      {fragment.tags.length === 0 ? (
+                        <span class="organize-muted">当前没有标签</span>
+                      ) : (
+                        fragment.tags.map((tag) => (
+                          <span class="organize-tag" data-current-tag>{tag}</span>
+                        ))
+                      )}
+                    </div>
+                    <div class="organize-suggestion">
+                      <div class="organize-suggestion-head">
+                        <span class="organize-mode" data-organize-mode>
+                          {suggestion.mode === 'ai' ? 'AI 建议' : '规则建议'}
+                        </span>
+                        <span class="organize-note" data-organize-note>{suggestion.notice ?? ''}</span>
+                      </div>
+                      <p class="organize-summary" data-organize-summary>{suggestion.summary}</p>
+                      <div class="organize-suggested-row">
+                        <span class="organize-label">建议标签</span>
+                        <div class="organize-suggested" data-suggested-tags>
+                          {suggestion.tags.length === 0 ? (
+                            <span class="organize-muted">没有可靠建议</span>
+                          ) : (
+                            suggestion.tags.map((tag) => (
+                              <span class="organize-tag organize-tag--suggested" data-suggested-tag>{tag}</span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <div class="organize-duplicates" data-organize-duplicates>
+                        {suggestion.duplicates.length === 0 ? (
+                          <span class="organize-muted">没有发现明显重复</span>
+                        ) : (
+                          suggestion.duplicates.map((duplicate) => (
+                            <a
+                              class="organize-duplicate"
+                              href={`/inbox?query=${encodeURIComponent(quoteOf(duplicate))}`}
+                              title={`${duplicate.reason} · ${Math.round(duplicate.score * 100)}%`}
+                            >
+                              <span>{quoteOf(duplicate)}</span>
+                              <small>{duplicate.reason}</small>
+                            </a>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="organize-actions">
+                    {aiEnabled && (
+                      <button
+                        class="private-button private-button--small"
+                        type="button"
+                        data-organize-generate
+                      >
+                        AI 细化
+                      </button>
+                    )}
+                    <button
+                      class="private-button private-button--primary private-button--small"
+                      type="button"
+                      data-organize-apply
+                      disabled={suggestion.tags.length === 0}
+                    >
+                      应用建议标签
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )
+      }
+    </section>
+
+    <p class="organize-status" data-organize-status role="status" aria-live="polite"></p>
+  </main>
+</PortalLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>('.organize-shell');
+  const status = document.querySelector<HTMLElement>('[data-organize-status]');
+
+  function setStatus(message: string): void {
+    if (status) status.textContent = message;
+  }
+
+  function renderTags(container: Element | null, tags: string[], suggested = false): void {
+    if (!container) return;
+    container.replaceChildren();
+    if (tags.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'organize-muted';
+      empty.textContent = suggested ? '没有可靠建议' : '当前没有标签';
+      container.append(empty);
+      return;
+    }
+    for (const tag of tags) {
+      const item = document.createElement('span');
+      item.className = suggested ? 'organize-tag organize-tag--suggested' : 'organize-tag';
+      item.dataset[suggested ? 'suggestedTag' : 'currentTag'] = '';
+      item.textContent = tag;
+      container.append(item);
+    }
+  }
+
+  function renderDuplicates(container: Element | null, duplicates: Array<{ quote: string; reason: string; score: number }>): void {
+    if (!container) return;
+    container.replaceChildren();
+    if (duplicates.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'organize-muted';
+      empty.textContent = '没有发现明显重复';
+      container.append(empty);
+      return;
+    }
+    for (const duplicate of duplicates) {
+      const link = document.createElement('a');
+      link.className = 'organize-duplicate';
+      link.href = `/inbox?query=${encodeURIComponent(duplicate.quote)}`;
+      link.title = `${duplicate.reason} · ${Math.round(duplicate.score * 100)}%`;
+      const text = document.createElement('span');
+      text.textContent = duplicate.quote || '无标题碎片';
+      const meta = document.createElement('small');
+      meta.textContent = duplicate.reason;
+      link.append(text, meta);
+      container.append(link);
+    }
+  }
+
+  function tagsIn(container: Element | null, selector: string): string[] {
+    if (!container) return [];
+    return [...container.querySelectorAll(selector)]
+      .map((item) => item.textContent?.trim() ?? '')
+      .filter(Boolean);
+  }
+
+  async function generateSuggestion(item: HTMLElement, button: HTMLButtonElement): Promise<void> {
+    const id = item.dataset.id;
+    if (!id) return;
+    button.disabled = true;
+    const previous = button.textContent;
+    button.textContent = '整理中…';
+    setStatus('正在生成建议…');
+    try {
+      const response = await fetch('/api/organize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fragmentId: id }),
+      });
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        data?: {
+          mode?: 'ai' | 'rules';
+          summary?: string;
+          tags?: string[];
+          duplicates?: Array<{ quote: string; reason: string; score: number }>;
+          notice?: string;
+        };
+        error?: { message?: string };
+      } | null;
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(payload?.error?.message || `整理失败（${response.status}）`);
+      }
+      const data = payload.data;
+      const mode = item.querySelector<HTMLElement>('[data-organize-mode]');
+      const note = item.querySelector<HTMLElement>('[data-organize-note]');
+      const summary = item.querySelector<HTMLElement>('[data-organize-summary]');
+      const apply = item.querySelector<HTMLButtonElement>('[data-organize-apply]');
+      if (mode) mode.textContent = data.mode === 'ai' ? 'AI 建议' : '规则建议';
+      if (note) note.textContent = data.notice ?? '';
+      if (summary) summary.textContent = data.summary ?? '';
+      const tags = data.tags ?? [];
+      renderTags(item.querySelector('[data-suggested-tags]'), tags, true);
+      renderDuplicates(item.querySelector('[data-organize-duplicates]'), data.duplicates ?? []);
+      if (apply) apply.disabled = tags.length === 0;
+      setStatus(data.mode === 'ai' ? 'AI 建议已更新。' : '已使用规则建议。');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '整理失败，请重试。');
+    } finally {
+      button.disabled = false;
+      button.textContent = previous || 'AI 细化';
+    }
+  }
+
+  async function applyTags(item: HTMLElement, button: HTMLButtonElement): Promise<void> {
+    const id = item.dataset.id;
+    if (!id) return;
+    const current = tagsIn(item.querySelector('[data-current-tags]'), '[data-current-tag]');
+    const suggested = tagsIn(item.querySelector('[data-suggested-tags]'), '[data-suggested-tag]');
+    const merged = [...new Set([...current, ...suggested])].slice(0, 20);
+    if (merged.length === current.length) {
+      setStatus('没有需要追加的新标签。');
+      return;
+    }
+    button.disabled = true;
+    setStatus('正在保存标签…');
+    try {
+      const response = await fetch(`/api/fragments/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tags: merged }),
+      });
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: { message?: string };
+      } | null;
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error?.message || `保存失败（${response.status}）`);
+      }
+      renderTags(item.querySelector('[data-current-tags]'), merged);
+      button.textContent = '已应用';
+      setStatus('标签已追加，没有覆盖原有标签。');
+    } catch (error) {
+      button.disabled = false;
+      setStatus(error instanceof Error ? error.message : '保存失败，请重试。');
+    }
+  }
+
+  async function generateReview(button: HTMLButtonElement): Promise<void> {
+    button.disabled = true;
+    const previous = button.textContent;
+    button.textContent = '复盘生成中…';
+    setStatus('正在生成本周回顾…');
+    try {
+      const response = await fetch('/api/review', { method: 'POST' });
+      if (response.status === 401) {
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        data?: { mode?: 'ai' | 'rules'; text?: string; notice?: string };
+        error?: { message?: string };
+      } | null;
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(payload?.error?.message || `生成失败（${response.status}）`);
+      }
+      const text = document.querySelector<HTMLElement>('[data-review-text]');
+      const mode = document.querySelector<HTMLElement>('[data-review-mode]');
+      const note = document.querySelector<HTMLElement>('[data-review-note]');
+      if (text) text.textContent = payload.data.text ?? '';
+      if (mode) mode.textContent = payload.data.mode === 'ai' ? 'AI 模式' : '规则模式';
+      if (note) note.textContent = payload.data.notice ?? '';
+      setStatus(payload.data.mode === 'ai' ? 'AI 回顾已更新。' : '当前使用规则回顾。');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '回顾生成失败，请重试。');
+    } finally {
+      button.disabled = false;
+      button.textContent = previous || 'AI 复盘';
+    }
+  }
+
+  root?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const reviewButton = target.closest<HTMLButtonElement>('[data-review-generate]');
+    if (reviewButton) {
+      void generateReview(reviewButton);
+      return;
+    }
+    const generate = target.closest<HTMLButtonElement>('[data-organize-generate]');
+    if (generate) {
+      const item = generate.closest<HTMLElement>('[data-organize-item]');
+      if (item) void generateSuggestion(item, generate);
+      return;
+    }
+    const apply = target.closest<HTMLButtonElement>('[data-organize-apply]');
+    if (apply) {
+      const item = apply.closest<HTMLElement>('[data-organize-item]');
+      if (item) void applyTags(item, apply);
+    }
+  });
+</script>

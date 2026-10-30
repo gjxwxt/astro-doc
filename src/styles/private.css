@@ -3933,3 +3933,444 @@
     transform: none;
   }
 }
+
+/* Organize / weekly review */
+.organize-head {
+  align-items: flex-end;
+}
+
+.organize-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(58px, auto));
+  gap: 18px;
+  align-items: end;
+}
+
+.organize-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.organize-stat strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--step-5);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.organize-stat span {
+  color: var(--ink-3);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.organize-review {
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid color-mix(in oklab, var(--line) 75%, var(--paper));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--lime) 20%, transparent), transparent 46%),
+    var(--paper);
+  box-shadow: 0 12px 30px rgb(8 20 12 / 0.06);
+}
+
+.organize-review-head,
+.organize-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.organize-review h2,
+.organize-section-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--step-5);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.organize-review h2 {
+  font-size: var(--step-4);
+}
+
+.organize-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.organize-mode {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.organize-review-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(190px, 0.65fr);
+  gap: 30px;
+  margin-top: 22px;
+}
+
+.organize-review-text {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--step-2);
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
+.organize-review-side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.organize-spark {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  height: 58px;
+}
+
+.organize-spark > span {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  min-width: 0;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  white-space: nowrap;
+}
+
+.organize-spark i {
+  display: block;
+  width: 100%;
+  max-width: 22px;
+  height: var(--bar);
+  min-height: 4px;
+  border-radius: 3px 3px 1px 1px;
+  background: color-mix(in oklab, var(--forest-600) 68%, var(--lime));
+}
+
+.organize-spark small {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: inherit;
+  text-overflow: clip;
+}
+
+.organize-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.organize-chip {
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.68rem;
+}
+
+.organize-chip small {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.organize-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.organize-pending {
+  margin-top: clamp(40px, 7vw, 72px);
+}
+
+.organize-section-head {
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.organize-section-head h2 span {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--step-2);
+  vertical-align: middle;
+}
+
+.organize-section-head > p {
+  max-width: 36ch;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--step-1);
+  line-height: 1.6;
+  text-align: right;
+}
+
+.organize-list {
+  display: grid;
+  gap: 12px;
+}
+
+.organize-item {
+  display: flex;
+  gap: 22px;
+  justify-content: space-between;
+  padding: 20px 20px 18px;
+  border: 1px solid var(--line);
+  border-radius: 5px 11px 6px 9px;
+  background: color-mix(in oklab, var(--paper) 94%, var(--paper-2));
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.organize-item:hover {
+  border-color: color-mix(in oklab, var(--ink-3) 58%, var(--line));
+  box-shadow: 0 8px 22px rgb(8 20 12 / 0.06);
+}
+
+.organize-item-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.organize-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.organize-item-meta span + span::before {
+  margin-right: 10px;
+  color: var(--line);
+  content: '/';
+}
+
+.organize-quote {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 9px 0 11px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.organize-current {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 21px;
+}
+
+.organize-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.organize-tag--suggested {
+  border-color: color-mix(in oklab, var(--forest-600) 40%, var(--line));
+  background: color-mix(in oklab, var(--lime) 24%, var(--paper));
+  color: var(--forest-700);
+}
+
+.organize-muted {
+  color: var(--ink-3);
+  font-size: 0.7rem;
+}
+
+.organize-suggestion {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px dashed color-mix(in oklab, var(--line) 82%, var(--paper));
+}
+
+.organize-suggestion-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.organize-summary {
+  margin: 7px 0 0;
+  color: var(--ink-2);
+  font-size: var(--step-1);
+  line-height: 1.7;
+}
+
+.organize-suggested-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.organize-label {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+}
+
+.organize-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.organize-duplicates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.organize-duplicate {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  align-items: baseline;
+  color: var(--link);
+  font-size: 0.7rem;
+  text-decoration: none;
+}
+
+.organize-duplicate span {
+  overflow: hidden;
+  max-width: 34ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organize-duplicate small {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+.organize-duplicate:hover span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.organize-actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-width: 104px;
+}
+
+.organize-actions .private-button {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 0.72rem;
+}
+
+.organize-empty {
+  padding: 54px 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.organize-empty h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--step-5);
+  font-weight: 500;
+}
+
+.organize-empty p:last-child {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+
+.organize-status {
+  min-height: 1.5em;
+  margin: 18px 0 0;
+  color: var(--ink-3);
+  font-size: var(--step-1);
+}
+
+@media (max-width: 760px) {
+  .organize-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .organize-stats {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .organize-review-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .organize-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .organize-section-head > p {
+    text-align: left;
+  }
+
+  .organize-item {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .organize-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organize-item {
+    transition: none;
+  }
+}
