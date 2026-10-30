@@ -448,7 +448,14 @@ function showSettings(next) {
   els.capturePanel.hidden = next;
   els.settingsPanel.hidden = !next;
   els.settingsButton.textContent = next ? '返回' : '设置';
-  if (next) fillSettings();
+  if (next) {
+    fillSettings();
+    if (settings.token && window.joshLocalConfig?.token) {
+      setStatus(els.settingsStatus, '已读取本地 config.local.json；这里保存会覆盖它。', 'ok');
+    } else if (!settings.token) {
+      setStatus(els.settingsStatus, '没有读到 Token，请手动填入 PRIVATE_API_TOKEN。', 'error');
+    }
+  }
 }
 
 async function testConnection() {
@@ -522,6 +529,17 @@ function bind() {
 async function quickSaveSelection(value) {
   const text = String(value || '').trim();
   if (!text) return;
+  loadSettings();
+  if (!settings.token) {
+    els.content.value = text;
+    showSettings(true);
+    setStatus(
+      els.settingsStatus,
+      '没有读到 Token。检查 config.local.json 是否在插件目录，或在下面手动填入 PRIVATE_API_TOKEN。',
+      'error',
+    );
+    return;
+  }
   try {
     if (isImageUrl(text)) {
       const alt = altFromName(new URL(text).pathname);
@@ -555,6 +573,10 @@ async function quickSaveSelection(value) {
     }
     els.content.value = text;
     setStatus(els.status, `秒存失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+    if (error && error.status === 401) {
+      showSettings(true);
+      setStatus(els.settingsStatus, 'Token 没有生效。重新加载插件，或在这里重新填一次 Token。', 'error');
+    }
   }
 }
 

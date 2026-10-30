@@ -54,7 +54,15 @@ cp utools-plugin/josh-capture/config.example.json \
    utools-plugin/josh-capture/config.local.json
 ```
 
-然后填 `portalUrl`、`publicBaseUrl`、`token`。`config.local.json` 已在 `.gitignore` 里，不会被提交；插件启动时由 preload 读取，设置页仍可覆盖。
+然后填 `portalUrl`、`publicBaseUrl`、`token`。插件会把同一份配置生成为 `config.local.js` 并在 `app.js` 之前加载；`config.local.json` / `config.local.js` 都在 `.gitignore` 里，不会提交。
+
+两个文件都需要放在插件目录；设置页仍然可以覆盖。
+
+如果「秒存」提示“请先登录，或使用私有 API Token”：
+
+1. 确认 `config.local.js` 在插件目录，且不是空文件
+2. 在 uTools 开发者工具里重新加载插件（改 `plugin.json` / preload / config 都要重载）
+3. 重新加载后仍然不行，点右上角「设置」手动填一次 Token
 
 改完 `plugin.json` / `preload.js` 后要在 uTools 开发者工具里重新加载插件。
 

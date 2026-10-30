@@ -31,3 +31,5 @@ content-sync.config.json
 # Phase 2 private data
 data/
 utools-plugin/josh-capture/config.local.json
+
+utools-plugin/josh-capture/config.local.js
