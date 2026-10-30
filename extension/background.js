@@ -51,14 +51,14 @@ async function rebuildMenus() {
 
   createMenu({
     id: SAVE_LINK_ID,
-    title: ready ? '保存链接到 Josh Inbox' : '保存链接（先配置 Token）',
+    title: ready ? '保存链接到半亩 Inbox' : '保存链接（先配置 Token）',
     contexts: ['link'],
     enabled: ready,
   });
 
   createMenu({
     id: SAVE_IMAGE_ID,
-    title: ready ? '保存图片到 Josh Inbox' : '保存图片（先配置 Token）',
+    title: ready ? '保存图片到半亩 Inbox' : '保存图片（先配置 Token）',
     contexts: ['image'],
     enabled: ready,
   });
@@ -79,7 +79,7 @@ async function rebuildMenus() {
 
   createMenu({
     id: PARENT_ID,
-    title: '存到 Josh Inbox',
+    title: '存到半亩 Inbox',
     contexts: ['selection'],
   });
 
@@ -459,7 +459,7 @@ async function saveImage(info, tab) {
     }
     await notify(
       tab.id,
-      transferred ? '图片已转存到 Josh 媒体库。' : '图片地址已保存（未能转存文件）。',
+      transferred ? '图片已转存到半亩媒体库。' : '图片地址已保存（未能转存文件）。',
       transferred ? 'success' : 'pending',
     );
   } catch {

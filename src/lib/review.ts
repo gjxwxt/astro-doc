@@ -176,7 +176,7 @@ export async function generateReview(
     };
     const text = await chatText(runtime, {
       system: [
-        '你是 Josh 私人知识库的周报助手。',
+        '你是半亩私人知识库的周报助手。',
         '只根据给定的统计数据写一段中文回顾，120-220 字。',
         'weekNew、weekByDay、weekTopTags、weekKinds、weekSources 都是本周数据。',
         'mediaLibraryTotal 是整个媒体库的文件总数，draftsTotal 是草稿总数，libraryTotal 是碎片总数。',

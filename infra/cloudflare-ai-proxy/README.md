@@ -1,6 +1,6 @@
 # Cloudflare AI Proxy
 
-把门户的 OpenAI 兼容请求转发到 Gemini，避免在 Josh 服务器上直接暴露 Gemini key，也绕过服务器到 `generativelanguage.googleapis.com` 的网络问题。
+把门户的 OpenAI 兼容请求转发到 Gemini，避免在半亩服务器上直接暴露 Gemini key，也绕过服务器到 `generativelanguage.googleapis.com` 的网络问题。
 
 当前生产地址：
 

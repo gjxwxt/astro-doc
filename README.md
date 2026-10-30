@@ -1,6 +1,6 @@
-# Josh 的个人门户
+# 半亩（Bothy）
 
-文档、笔记、工具和收藏，一个入口。基于 Astro 7 + Starlight，静态优先，工具插件化。
+文档、笔记、工具和收藏，一个入口。半亩是产品名，Bothy 是它的英文名；Josh 是作者。基于 Astro 7 + Starlight，静态优先，工具插件化。
 
 - 门户：`/`
 - 文档：`/docs/`（Starlight）

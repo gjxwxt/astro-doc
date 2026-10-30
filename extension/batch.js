@@ -219,7 +219,7 @@
 
     panel = makeNode('section', 'panel');
     panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', '批量标注到 Josh Inbox');
+    panel.setAttribute('aria-label', '批量标注到半亩 Inbox');
 
     const head = makeNode('header', 'head');
     const title = makeNode('div', '');

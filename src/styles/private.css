@@ -24,6 +24,17 @@
   text-decoration: none;
 }
 
+.private-brand-en {
+  margin-left: 8px;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .private-bar nav {
   display: flex;
   align-items: center;

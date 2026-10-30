@@ -1,6 +1,6 @@
-# Josh Media（Obsidian 插件）
+# 半亩媒体（Obsidian 插件）
 
-把 Obsidian 里**新粘贴**的图片、图片 URL、本地图片路径上传到 Josh 私有媒体库，并插入 Markdown 链接。
+把 Obsidian 里**新粘贴**的图片、图片 URL、本地图片路径上传到半亩私有媒体库，并插入 Markdown 链接。
 
 存量图片不走这个插件，用根目录的迁移 CLI：
 
@@ -16,7 +16,7 @@ pnpm media:migrate --vault ~/Documents/Obsidian
 <vault>/.obsidian/plugins/josh-media/
 ```
 
-2. Obsidian → 设置 → 第三方插件 → 关闭安全模式 → 启用 **Josh Media**。
+2. Obsidian → 设置 → 第三方插件 → 关闭安全模式 → 启用 **半亩媒体**。
 
 不需要构建，`main.js` 就是源码。
 
@@ -42,8 +42,8 @@ http://127.0.0.1:4400
 https://old.example.com
 ```
 
-3. 命令面板执行 **「Josh Media: 检查 Josh 媒体地址」**，先看会改多少篇
-4. 确认后执行 **「Josh Media: 重写 Josh 媒体地址」**
+3. 命令面板执行 **「半亩媒体: 检查半亩媒体地址」**，先看会改多少篇
+4. 确认后执行 **「半亩媒体: 重写半亩媒体地址」**
 
 只会匹配 `/media/<64位hash>.<png|jpg|jpeg|webp|gif|avif>`，不会动其他远程图片。默认会先备份到 vault 的 `.josh-media-backup/`。
 

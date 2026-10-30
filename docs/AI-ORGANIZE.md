@@ -49,7 +49,7 @@ AI_ENABLED=0
 服务器无法直连 Gemini 时，用 Cloudflare Worker 做固定路径代理：
 
 ```text
-Josh 服务器 → https://ai.gaojiaxiang.cn/v1/chat/completions
+半亩服务器 → https://ai.gaojiaxiang.cn/v1/chat/completions
             → Cloudflare Worker
             → generativelanguage.googleapis.com
 ```

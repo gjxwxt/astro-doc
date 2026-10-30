@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Josh Inbox",
-  "version": "0.5.0",
-  "description": "把当前网页的选中文字、链接、图片或同页多段标注保存到私有 Josh Inbox。",
+  "name": "半亩 Inbox",
+  "version": "0.6.0",
+  "description": "把当前网页的选中文字、链接、图片或同页多段标注保存到半亩私有 Inbox。",
   "permissions": [
     "activeTab",
     "scripting",
@@ -17,7 +17,7 @@
     "<all_urls>"
   ],
   "action": {
-    "default_title": "保存到 Josh Inbox",
+    "default_title": "保存到半亩 Inbox",
     "default_popup": "popup.html"
   },
   "background": {

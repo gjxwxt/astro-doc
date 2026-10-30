@@ -1,9 +1,11 @@
 export const siteConfig = {
-  name: 'Josh',
+  name: '半亩',
+  latin: 'Bothy',
+  author: 'Josh',
   handle: 'gjxwxt',
-  title: 'Josh · 文档、笔记与工具',
-  description: '文档、笔记、工具和收藏。把学过的东西，做成能用的东西。',
-  intro: '个人门户：文档、笔记、工具和收藏。',
+  title: '半亩 · 文档、笔记与工具',
+  description: '留一点自己的东西。文档、笔记、工具和收藏。',
+  intro: '留一点自己的东西。',
   github: 'https://github.com/gjxwxt',
   nav: [
     { label: '文档', href: '/docs/' },

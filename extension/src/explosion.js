@@ -179,7 +179,7 @@ function openShell(page) {
     <div class="overlay" role="dialog" aria-modal="true" aria-label="页面大爆炸预览">
       <div class="shell">
         <div class="topbar">
-          <div class="brand"><span class="mark">J</span><span>Josh · 页面大爆炸</span></div>
+          <div class="brand"><span class="mark">半</span><span>半亩 · 页面大爆炸</span></div>
           <div class="top-actions"><button class="close" type="button" title="关闭">×</button></div>
         </div>
         <div class="source">

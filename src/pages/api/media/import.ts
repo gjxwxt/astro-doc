@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request }) => {
   const rawSrc = fragment ? imageSrcFromMetadata(fragment.metadata) : explicitUrl;
   if (!rawSrc) return jsonError(400, 'NO_IMAGE_URL', '没有找到要转存的图片地址。');
   if (isManagedMediaUrl(rawSrc)) {
-    return jsonError(409, 'ALREADY_MANAGED', '这张图片已经在 Josh 媒体库里。');
+    return jsonError(409, 'ALREADY_MANAGED', '这张图片已经在半亩媒体库里。');
   }
 
   let remote;

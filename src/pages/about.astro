@@ -3,7 +3,7 @@ import PortalLayout from '@/layouts/PortalLayout.astro';
 import { siteConfig } from '@/config/site';
 ---
 
-<PortalLayout title="关于" description="关于 Josh，以及这个站为什么长这样。">
+<PortalLayout title="关于" description="关于 Josh，以及半亩为什么长这样。">
   <div class="page page--narrow">
     <header class="page-head">
       <h1>关于</h1>
@@ -14,7 +14,7 @@ import { siteConfig } from '@/config/site';
       <p>这个站最早是一个 Starlight 文档模板，后来加了一个硬编码的网址导航。文档、导航和样式混在一起，改起来越来越费劲，所以 2026 年重做了一次。</p>
       <p>现在它被拆成四个部分：文档用来放整理过的长内容，笔记记录更随手的想法，工具是能直接用的插件，收藏是每天会点开的入口。它们共享一套样式和一份搜索索引，但各自独立。</p>
       <p>页面尽量预渲染成静态 HTML；只有需要联网的工具和 AI 助手走服务端。AI 助手不配置 key 也能用，会退化成站内检索，不会因为一个 key 缺失就整个不可用。</p>
-      <p class="signature">{siteConfig.name}</p>
+      <p class="signature">{siteConfig.author}</p>
     </div>
 
     <section class="home-section" aria-labelledby="now-title">

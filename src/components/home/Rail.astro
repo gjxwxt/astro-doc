@@ -8,7 +8,7 @@ import mark from '@/assets/mark.svg';
 
 <aside class="rail">
   <div class="rail-top">
-    <a class="rail-mark" href="/" aria-label={`${siteConfig.name} 的个人门户`}>
+    <a class="rail-mark" href="/" aria-label={`${siteConfig.name} 首页`}>
       <img src={mark.src} alt="" width="32" height="32" />
     </a>
     <div class="header-actions">
@@ -28,7 +28,7 @@ import mark from '@/assets/mark.svg';
     </div>
   </div>
 
-  <h1>{siteConfig.name}<span class="visually-hidden">的个人门户</span></h1>
+  <h1>{siteConfig.name}<span class="rail-latin">{siteConfig.latin}</span></h1>
   <p class="rail-lede">{siteConfig.intro}</p>
 
   <RailSearch />

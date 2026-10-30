@@ -23,7 +23,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: 'Josh 的文档',
+      title: '半亩文档',
       description: '前端、工程实践与长期维护的技术笔记。',
       defaultLocale: 'zh-CN',
       locales: {
@@ -31,7 +31,7 @@ export default defineConfig({
       },
       logo: {
         src: './src/assets/mark.svg',
-        alt: 'Josh',
+        alt: '半亩',
         replacesTitle: false,
       },
       favicon: '/favicon.svg',

@@ -15,7 +15,7 @@ if (!getSession(Astro.request, process.env)) {
 
 <PortalLayout title="Inbox" noindex bare private bodyClass="private-body">
   <header class="private-bar">
-    <a class="private-brand" href="/">Josh</a>
+    <a class="private-brand" href="/">半亩<span class="private-brand-en">Bothy</span></a>
     <nav aria-label="私有导航">
       <a href="/inbox">Inbox</a>
       <a href="/drafts">Drafts</a>
@@ -2289,7 +2289,7 @@ if (!getSession(Astro.request, process.env)) {
     transferBtn.className = 'image-liquid-action';
     transferBtn.type = 'button';
     transferBtn.textContent = '转存';
-    transferBtn.title = '把这张远程图片保存到 Josh 媒体库';
+    transferBtn.title = '把这张远程图片保存到半亩媒体库';
     transferBtn.hidden = image.transferred === true || isManagedMediaSrc(image.src);
     transferBtn.addEventListener('click', async (event) => {
       event.stopPropagation();

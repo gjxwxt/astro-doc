@@ -45,7 +45,7 @@ PORT=4321 pnpm start
 
 ```ini
 [Unit]
-Description=Josh portal
+Description=Bothy portal
 After=network.target
 
 [Service]

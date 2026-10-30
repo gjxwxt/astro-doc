@@ -8,9 +8,10 @@ const isCurrent = (href: string) => pathname === href || pathname.startsWith(hre
 ---
 
 <header class="site-header">
-  <a class="brand" href="/" aria-label="回到首页">
+  <a class="brand" href="/" aria-label="回到半亩首页">
     <img src={mark.src} alt="" width="30" height="30" />
     <span>{siteConfig.name}</span>
+    <span class="brand-latin">{siteConfig.latin}</span>
   </a>
 
   <nav class="site-nav" aria-label="主导航">

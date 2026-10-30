@@ -1,9 +1,9 @@
 {
   "id": "josh-media",
-  "name": "Josh Media",
-  "version": "0.2.1",
+  "name": "半亩媒体",
+  "version": "0.3.0",
   "minAppVersion": "1.4.0",
-  "description": "把粘贴的图片、图片地址和本地路径上传到 Josh 私有媒体库，并支持批量重写媒体地址。",
+  "description": "把粘贴的图片、图片地址和本地路径上传到半亩私有媒体库，并支持批量重写媒体地址。",
   "author": "Josh",
   "isDesktopOnly": true
 }

@@ -1,37 +1,39 @@
 {
   "pluginName": "josh-capture",
-  "description": "把任意应用的选中文字、剪贴板图片和链接快速存进 Josh Inbox。",
+  "description": "把任意应用的选中文字、剪贴板图片和链接快速存进半亩 Inbox。",
   "author": "Josh",
   "homepage": "http://127.0.0.1:4400/inbox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "logo": "logo.png",
   "main": "index.html",
   "preload": "preload.js",
   "features": [
     {
       "code": "capture",
-      "explain": "快速收藏文字、链接或图片到 Josh Inbox",
+      "explain": "快速收藏文字、链接或图片到半亩 Inbox",
       "cmds": [
         "josh",
-        "Josh",
+        "半亩",
+        "Bothy",
         "收藏"
       ]
     },
     {
       "code": "capture-image",
-      "explain": "收藏剪贴板/本地图片到 Josh Inbox",
+      "explain": "收藏剪贴板/本地图片到半亩 Inbox",
       "cmds": [
         "图片收藏",
-        "josh image"
+        "josh image",
+        "bothy image"
       ]
     },
     {
       "code": "capture-selection",
-      "explain": "收集选中的文字到 Josh Inbox，可补标签和备注",
+      "explain": "收集选中的文字到半亩 Inbox，可补标签和备注",
       "cmds": [
         {
           "type": "over",
-          "label": "收藏到 Josh",
+          "label": "收藏到半亩",
           "minLength": 1,
           "maxLength": 20000
         }
@@ -39,11 +41,11 @@
     },
     {
       "code": "quick-selection",
-      "explain": "选中文字后静默存入 Josh Inbox，不打开插件页面",
+      "explain": "选中文字后静默存入半亩 Inbox，不打开插件页面",
       "cmds": [
         {
           "type": "over",
-          "label": "秒存到 Josh",
+          "label": "秒存到半亩",
           "minLength": 1,
           "maxLength": 20000
         }

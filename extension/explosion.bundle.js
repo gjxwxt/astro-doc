@@ -212,7 +212,7 @@ ${F}
     <div class="overlay" role="dialog" aria-modal="true" aria-label="\u9875\u9762\u5927\u7206\u70B8\u9884\u89C8">
       <div class="shell">
         <div class="topbar">
-          <div class="brand"><span class="mark">J</span><span>Josh \xB7 \u9875\u9762\u5927\u7206\u70B8</span></div>
+          <div class="brand"><span class="mark">\u534A</span><span>\u534A\u4EA9 \xB7 \u9875\u9762\u5927\u7206\u70B8</span></div>
           <div class="top-actions"><button class="close" type="button" title="\u5173\u95ED">\xD7</button></div>
         </div>
         <div class="source">

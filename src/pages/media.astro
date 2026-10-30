@@ -46,7 +46,7 @@ function formatDate(value: string): string {
 
 <PortalLayout title="媒体库" noindex bare private bodyClass="private-body">
   <header class="private-bar">
-    <a class="private-brand" href="/">Josh</a>
+    <a class="private-brand" href="/">半亩<span class="private-brand-en">Bothy</span></a>
     <nav aria-label="私有导航">
       <a href="/inbox">Inbox</a>
       <a href="/drafts">Drafts</a>
@@ -62,7 +62,7 @@ function formatDate(value: string): string {
       <div>
         <p class="private-eyebrow">Private workspace</p>
         <h1>Media</h1>
-        <p>已经进入 Josh 的图片都在这里。粘贴、拖入或点开选择，原图会按内容哈希去重保存。</p>
+        <p>已经进入半亩的图片都在这里。粘贴、拖入或点开选择，原图会按内容哈希去重保存。</p>
       </div>
       <div class="media-stat" aria-label="媒体统计">
         <strong>{result.total}</strong>
@@ -104,7 +104,7 @@ function formatDate(value: string): string {
               >
                 <img
                   src={item.displayUrl}
-                  alt={item.originalName || 'Josh 媒体图片'}
+                  alt={item.originalName || '半亩媒体图片'}
                   loading="lazy"
                   decoding="async"
                 />

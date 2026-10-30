@@ -394,7 +394,7 @@ async function save() {
       const count = images.length;
       clearCapture();
       setStatus(els.status, `已存入 ${count} 张图片到 Inbox。`, 'ok');
-      notify('Josh：图片已存入 Inbox');
+      notify('半亩：图片已存入 Inbox');
       return;
     }
 
@@ -407,7 +407,7 @@ async function save() {
         for (const item of images) await saveImageFile(item.file);
         clearCapture();
         setStatus(els.status, `已存入 ${count} 张图片到 Inbox。`, 'ok');
-        notify('Josh：图片已存入 Inbox');
+        notify('半亩：图片已存入 Inbox');
         return;
       }
     }
@@ -426,7 +426,7 @@ async function save() {
     const savedMessage = els.status.textContent;
     clearCapture();
     setStatus(els.status, savedMessage, 'ok');
-    notify('Josh：已存入 Inbox');
+    notify('半亩：已存入 Inbox');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (error && error.status === 409) setStatus(els.status, '这条已经在 Inbox 里了。', 'ok');
@@ -564,11 +564,11 @@ async function quickSaveSelection(value) {
         body: JSON.stringify({ kind: 'quote', quote: text }),
       });
     }
-    notify('Josh：已存入 Inbox');
+    notify('半亩：已存入 Inbox');
     window.setTimeout(() => window.utools?.outPlugin?.(), 220);
   } catch (error) {
     if (error && error.status === 409) {
-      notify('Josh：这条已经在 Inbox 里了');
+      notify('半亩：这条已经在 Inbox 里了');
       window.setTimeout(() => window.utools?.outPlugin?.(), 220);
       return;
     }

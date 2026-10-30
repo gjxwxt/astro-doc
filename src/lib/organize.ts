@@ -311,7 +311,7 @@ export async function organizeFragment(options: OrganizeOptions): Promise<Organi
   try {
     const result = await chatJson<AiOrganizeResult>(runtime, {
       system: [
-        '你是 Josh 私人知识库的整理助手。',
+        '你是半亩私人知识库的整理助手。',
         '只输出一个 JSON 对象，不要 Markdown 代码块，不要解释。',
         '字段：summary（中文字符串，最多 80 字）、tags（最多 3 个短标签）、duplicateIds（候选里真正重复的碎片 id，最多 3 个）。',
         '摘要必须来自原文，不要编造。标签优先复用现有标签，其次从原文提取；不要输出过于宽泛的词。',

@@ -155,9 +155,9 @@ class JoshMediaSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'Josh Media' });
+    containerEl.createEl('h2', { text: '半亩媒体' });
     containerEl.createEl('p', {
-      text: '粘贴图片、图片地址或本地图片路径时，自动上传到 Josh 私有媒体库，并插入 Markdown 链接。',
+      text: '粘贴图片、图片地址或本地图片路径时，自动上传到半亩私有媒体库，并插入 Markdown 链接。',
     });
 
     new Setting(containerEl)
@@ -256,10 +256,10 @@ class JoshMediaSettingTab extends PluginSettingTab {
               headers: { authorization: `Bearer ${this.plugin.settings.token}` },
               throw: false,
             });
-            if (result.status >= 200 && result.status < 300) new Notice('Josh 连接正常。');
-            else new Notice(`Josh 返回 ${result.status}：${await responseError(result)}`);
+            if (result.status >= 200 && result.status < 300) new Notice('半亩连接正常。');
+            else new Notice(`半亩返回 ${result.status}：${await responseError(result)}`);
           } catch (error) {
-            new Notice(`Josh 连接失败：${error instanceof Error ? error.message : String(error)}`);
+            new Notice(`半亩连接失败：${error instanceof Error ? error.message : String(error)}`);
           }
         }),
       );
@@ -301,13 +301,13 @@ module.exports = class JoshMediaPlugin extends Plugin {
 
     this.addCommand({
       id: 'check-josh-media-base',
-      name: '检查 Josh 媒体地址',
+      name: '检查半亩媒体地址',
       callback: () => void this.rewriteMediaBase(true),
     });
 
     this.addCommand({
       id: 'rewrite-josh-media-base',
-      name: '重写 Josh 媒体地址',
+      name: '重写半亩媒体地址',
       callback: () => void this.rewriteMediaBase(false),
     });
   }
@@ -351,7 +351,7 @@ module.exports = class JoshMediaPlugin extends Plugin {
       if (!replaceUploadPlaceholder(editor, placeholder, text)) {
         editor.replaceSelection(text);
       }
-      new Notice(`Josh 上传失败，已保留原文本：${error instanceof Error ? error.message : String(error)}`);
+      new Notice(`半亩上传失败，已保留原文本：${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -374,7 +374,7 @@ module.exports = class JoshMediaPlugin extends Plugin {
         }
       } catch (error) {
         replaceUploadPlaceholder(editor, item.placeholder, '');
-        new Notice(`Josh 上传失败：${error instanceof Error ? error.message : String(error)}`);
+        new Notice(`半亩上传失败：${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
@@ -482,24 +482,24 @@ module.exports = class JoshMediaPlugin extends Plugin {
     try {
       result = await this.collectMediaRewritePlan();
     } catch (error) {
-      new Notice(`Josh：${error instanceof Error ? error.message : String(error)}`);
+      new Notice(`半亩：${error instanceof Error ? error.message : String(error)}`);
       return;
     }
 
     const { plan, total, oldBases, newBase } = result;
     if (plan.length === 0) {
-      new Notice(`Josh：没有找到可重写的媒体地址（当前前缀 ${newBase}）`);
+      new Notice(`半亩：没有找到可重写的媒体地址（当前前缀 ${newBase}）`);
       return;
     }
 
     const fileCount = plan.length;
     if (dryRun) {
-      new Notice(`Josh：将修改 ${fileCount} 篇笔记、${total} 个图片地址 → ${newBase}\n旧地址：${oldBases.join(', ')}`, 8000);
+      new Notice(`半亩：将修改 ${fileCount} 篇笔记、${total} 个图片地址 → ${newBase}\n旧地址：${oldBases.join(', ')}`, 8000);
       return;
     }
 
     const confirmed = window.confirm(
-      `将修改 ${fileCount} 篇笔记、${total} 个 Josh 图片地址。\n\n` +
+      `将修改 ${fileCount} 篇笔记、${total} 个半亩图片地址。\n\n` +
         `旧地址：\n${oldBases.join('\n')}\n\n新地址：\n${newBase}\n\n继续？`,
     );
     if (!confirmed) return;
@@ -524,10 +524,10 @@ module.exports = class JoshMediaPlugin extends Plugin {
 
     const backupNote = this.settings.backupBeforeRewrite ? `；备份：${backupRoot}` : '';
     if (failures.length === 0) {
-      new Notice(`Josh：已重写 ${changedFiles} 篇、${changedLinks} 个图片地址${backupNote}`, 8000);
+      new Notice(`半亩：已重写 ${changedFiles} 篇、${changedLinks} 个图片地址${backupNote}`, 8000);
     } else {
       new Notice(
-        `Josh：重写 ${changedFiles} 篇、${changedLinks} 个地址；${failures.length} 篇失败${backupNote}\n${failures.slice(0, 3).join('\n')}`,
+        `半亩：重写 ${changedFiles} 篇、${changedLinks} 个地址；${failures.length} 篇失败${backupNote}\n${failures.slice(0, 3).join('\n')}`,
         12000,
       );
     }

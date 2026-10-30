@@ -27,6 +27,15 @@
   border-radius: 8px;
 }
 
+.brand-latin {
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .site-nav {
   display: flex;
   align-items: center;
@@ -230,6 +239,17 @@
   font-weight: 470;
   line-height: 0.9;
   letter-spacing: -0.048em;
+}
+
+.rail-latin {
+  display: block;
+  margin-top: 16px;
+  color: rgba(242, 243, 234, 0.5);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
 .rail-lede {
