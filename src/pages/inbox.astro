@@ -273,14 +273,23 @@ if (!getSession(Astro.request, process.env)) {
       </div>
       <footer class="image-viewer__foot">
         <p data-image-viewer-caption></p>
-        <a
-          data-image-viewer-origin
-          href="#"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          打开原图
-        </a>
+        <div class="image-viewer__actions">
+          <a
+            data-image-viewer-download
+            href="#"
+            download
+          >
+            下载图片
+          </a>
+          <a
+            data-image-viewer-origin
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            打开原图
+          </a>
+        </div>
       </footer>
     </div>
   </dialog>
@@ -458,6 +467,7 @@ if (!getSession(Astro.request, process.env)) {
   const imageViewer = document.querySelector<HTMLDialogElement>('[data-image-viewer]')!;
   const imageViewerImage = document.querySelector<HTMLImageElement>('[data-image-viewer-img]')!;
   const imageViewerCaption = document.querySelector<HTMLElement>('[data-image-viewer-caption]')!;
+  const imageViewerDownload = document.querySelector<HTMLAnchorElement>('[data-image-viewer-download]')!;
   const imageViewerOrigin = document.querySelector<HTMLAnchorElement>('[data-image-viewer-origin]')!;
   const imageViewerClose = document.querySelector<HTMLButtonElement>('[data-image-viewer-close]')!;
   const readerDialog = document.querySelector<HTMLDialogElement>('[data-reader-dialog]')!;
@@ -2069,6 +2079,10 @@ if (!getSession(Astro.request, process.env)) {
     return src ? { ...image, src } : null;
   }
 
+  function imageDownloadHref(fragment: Fragment): string {
+    return `/api/fragments/${encodeURIComponent(fragment.id)}/image`;
+  }
+
   function openImageViewer(fragment: Fragment, image: ImageMetadata): void {
     imageViewerImage.src = image.src;
     imageViewerImage.alt = image.alt || fragment.quote || '图片';
@@ -2078,6 +2092,7 @@ if (!getSession(Astro.request, process.env)) {
     ]
       .filter(Boolean)
       .join(' · ');
+    imageViewerDownload.href = imageDownloadHref(fragment);
     imageViewerOrigin.href = fragment.sourceUrl || image.pageUrl || image.src;
     if (!imageViewer.open) imageViewer.showModal();
   }
@@ -2192,6 +2207,14 @@ if (!getSession(Astro.request, process.env)) {
     card.className = 'fragment-card fragment-card--image';
     card.dataset.fragmentId = fragment.id;
 
+    const pin = document.createElement('span');
+    pin.className = 'image-pin';
+    pin.setAttribute('aria-hidden', 'true');
+    card.append(pin);
+
+    const stage = document.createElement('div');
+    stage.className = 'image-stage';
+
     const frame = document.createElement('button');
     frame.className = 'image-frame';
     frame.type = 'button';
@@ -2212,13 +2235,48 @@ if (!getSession(Astro.request, process.env)) {
       frame.append(fallback);
     });
 
-    const hint = document.createElement('span');
-    hint.className = 'image-view-hint';
-    hint.textContent = '查看大图';
-    frame.append(picture, hint);
-    frame.title = fragment.quote || image.alt || '查看大图';
+    frame.append(picture);
+    frame.title = fragment.quote || image.alt || '点击放大查看';
     frame.addEventListener('click', () => openImageViewer(fragment, image));
-    card.append(frame);
+
+    const dock = document.createElement('div');
+    dock.className = 'image-liquid-bar';
+    dock.setAttribute('role', 'toolbar');
+    dock.setAttribute('aria-label', '图片操作');
+
+    const zoomBtn = document.createElement('button');
+    zoomBtn.className = 'image-liquid-action';
+    zoomBtn.type = 'button';
+    zoomBtn.textContent = '放大';
+    zoomBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openImageViewer(fragment, image);
+    });
+
+    const downloadLink = document.createElement('a');
+    downloadLink.className = 'image-liquid-action';
+    downloadLink.href = imageDownloadHref(fragment);
+    downloadLink.download = '';
+    downloadLink.textContent = '下载';
+    downloadLink.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'image-liquid-action';
+    editBtn.type = 'button';
+    editBtn.textContent = '编辑';
+    editBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      startEdit(fragment, card);
+    });
+
+    const deleteControl = createDeleteControl(fragment, card);
+    deleteControl.classList.add('image-liquid-delete');
+
+    dock.append(zoomBtn, downloadLink, editBtn, deleteControl);
+    stage.append(frame, dock);
+    card.append(stage);
 
     if (fragment.note) {
       const note = document.createElement('p');
@@ -2252,7 +2310,11 @@ if (!getSession(Astro.request, process.env)) {
     }
     card.append(sourceLine);
 
-    card.append(renderActions(card, fragment));
+    const selectActions = document.createElement('div');
+    selectActions.className = 'fragment-actions fragment-actions--image';
+    selectActions.append(selectionControl(fragment));
+    card.append(selectActions);
+
     attachCardSelection(card, fragment);
     return card;
   }

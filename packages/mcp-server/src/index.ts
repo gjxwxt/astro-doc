@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 const PORTAL_URL = (process.env.PORTAL_URL ?? 'http://localhost:4321').replace(/\/+$/, '');
 const PORTAL_API_TOKEN = process.env.PORTAL_API_TOKEN?.trim() ?? '';
+const PRIVATE_API_TOKEN = process.env.PRIVATE_API_TOKEN?.trim() ?? '';
 
 interface JsonField {
   type?: string;
@@ -70,10 +71,10 @@ function log(message: string): void {
   process.stderr.write(`[portal-mcp] ${message}\n`);
 }
 
-async function fetchPortal(path: string, init?: RequestInit): Promise<Response> {
+async function fetchPortal(path: string, init?: RequestInit, bearer = PORTAL_API_TOKEN): Promise<Response> {
   const headers = new Headers(init?.headers);
-  headers.set('accept', 'application/json');
-  if (PORTAL_API_TOKEN) headers.set('authorization', `Bearer ${PORTAL_API_TOKEN}`);
+  if (!headers.has('accept')) headers.set('accept', 'application/json');
+  if (bearer) headers.set('authorization', `Bearer ${bearer}`);
   const response = await fetch(`${PORTAL_URL}${path}`, {
     ...init,
     headers,
@@ -84,6 +85,10 @@ async function fetchPortal(path: string, init?: RequestInit): Promise<Response> 
     throw new Error(`${response.status} ${detail.slice(0, 300)}`);
   }
   return response;
+}
+
+function fetchPrivatePortal(path: string, init?: RequestInit): Promise<Response> {
+  return fetchPortal(path, init, PRIVATE_API_TOKEN);
 }
 
 async function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
@@ -163,6 +168,216 @@ function normalizePath(value: string): string {
   }
 }
 
+function registerPrivateTools(server: McpServer): void {
+  server.registerTool(
+    'inbox_list_fragments',
+    {
+      title: '列出 Inbox 碎片',
+      description: '读取或筛选 Josh 私有 Inbox 里的碎片（支持关键词、标签、日期范围）。',
+      inputSchema: {
+        query: z.string().optional().describe('搜索原文、随想、标题或来源'),
+        tag: z.string().optional().describe('按标签名筛选，不含 #'),
+        status: z.enum(['inbox', 'archived']).optional().describe('状态筛选'),
+        from: z.string().optional().describe('起始日期 YYYY-MM-DD'),
+        to: z.string().optional().describe('截止日期 YYYY-MM-DD'),
+        limit: z.number().int().min(1).max(100).optional().describe('返回条数，默认 20'),
+        offset: z.number().int().min(0).optional().describe('分页偏移，默认 0'),
+      },
+    },
+    async ({ query, tag, status, from, to, limit, offset }) => {
+      try {
+        const params = new URLSearchParams();
+        if (query) params.set('query', query);
+        if (tag) params.set('tag', tag);
+        if (status) params.set('status', status);
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        params.set('limit', String(limit ?? 20));
+        if (offset) params.set('offset', String(offset));
+        const response = await fetchPrivatePortal(`/api/fragments?${params.toString()}`);
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'inbox_get_fragment',
+    {
+      title: '读取单条 Inbox 碎片',
+      description: '按 ID 读取一条私有碎片的完整原文、上下文、随想、标签与元数据。',
+      inputSchema: {
+        id: z.string().min(1).describe('碎片 UUID'),
+      },
+    },
+    async ({ id }) => {
+      try {
+        const response = await fetchPrivatePortal(`/api/fragments/${encodeURIComponent(id)}`);
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'inbox_save_fragment',
+    {
+      title: '保存碎片到 Inbox',
+      description: '从本地客户端直接向 Josh Inbox 保存一段摘录、想法或网页链接。',
+      inputSchema: {
+        kind: z.enum(['quote', 'link']).optional().describe('quote 保存文字碎片，link 保存链接卡片'),
+        quote: z.string().optional().describe('摘录或碎片正文（kind=quote 时必填）'),
+        url: z.string().optional().describe('要保存为链接卡片的 URL，或摘录来源 URL'),
+        note: z.string().optional().describe('个人随想或批注'),
+        tags: z.array(z.string()).optional().describe('标签列表'),
+        sourceTitle: z.string().optional().describe('来源标题'),
+      },
+    },
+    async ({ kind, quote, url, note, tags, sourceTitle }) => {
+      try {
+        const isLink = kind === 'link' || (!quote?.trim() && Boolean(url?.trim()));
+        if (isLink) {
+          if (!url?.trim()) return errorResult('保存链接卡片需要提供 url。');
+          const response = await fetchPrivatePortal('/api/fragments/link', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ url: url.trim(), note: note ?? '', tags: tags ?? [] }),
+          });
+          return textResult(await response.json());
+        }
+        if (!quote?.trim()) return errorResult('保存文字碎片需要提供 quote。');
+        const response = await fetchPrivatePortal('/api/fragments', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'quote',
+            quote: quote.trim(),
+            note: note ?? '',
+            sourceUrl: url?.trim() ?? '',
+            sourceTitle: sourceTitle?.trim() ?? '',
+            tags: tags ?? [],
+          }),
+        });
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'inbox_update_fragment',
+    {
+      title: '更新 Inbox 碎片',
+      description: '修改私有碎片的随想、标签或归档状态。',
+      inputSchema: {
+        id: z.string().min(1).describe('碎片 UUID'),
+        note: z.string().optional().describe('新的随想内容'),
+        tags: z.array(z.string()).optional().describe('更新后的完整标签列表'),
+        status: z.enum(['inbox', 'archived']).optional().describe('状态：inbox 或 archived'),
+      },
+    },
+    async ({ id, note, tags, status }) => {
+      try {
+        const response = await fetchPrivatePortal(`/api/fragments/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ note, tags, status }),
+        });
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'drafts_list',
+    {
+      title: '列出合成草稿',
+      description: '列出 Josh 私有草稿箱里的文章草稿。',
+      inputSchema: {
+        status: z.enum(['draft', 'exported', 'archived']).optional().describe('按草稿状态筛选'),
+        limit: z.number().int().min(1).max(100).optional().describe('返回条数，默认 20'),
+        offset: z.number().int().min(0).optional().describe('分页偏移，默认 0'),
+      },
+    },
+    async ({ status, limit, offset }) => {
+      try {
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        params.set('limit', String(limit ?? 20));
+        if (offset) params.set('offset', String(offset));
+        const response = await fetchPrivatePortal(`/api/drafts?${params.toString()}`);
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'drafts_get',
+    {
+      title: '读取或导出合成草稿',
+      description:
+        '按 ID 读取一篇私有草稿。format=markdown 时直接返回带 frontmatter 与来源附录的完整 Markdown，便于直接写入本地 Obsidian。',
+      inputSchema: {
+        id: z.string().min(1).describe('草稿 UUID'),
+        format: z
+          .enum(['json', 'markdown'])
+          .optional()
+          .describe('json 返回结构化草稿与引用；markdown 返回可直接落盘的导出全文'),
+      },
+    },
+    async ({ id, format }) => {
+      try {
+        if (format === 'markdown') {
+          const response = await fetchPrivatePortal(
+            `/api/drafts/${encodeURIComponent(id)}/export`,
+            { headers: { accept: 'text/markdown' } },
+          );
+          return textResult(await response.text());
+        }
+        const response = await fetchPrivatePortal(`/api/drafts/${encodeURIComponent(id)}`);
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    'drafts_update',
+    {
+      title: '更新合成草稿',
+      description: '在本地编辑或润色后，把标题、Markdown 正文或状态写回门户草稿箱。',
+      inputSchema: {
+        id: z.string().min(1).describe('草稿 UUID'),
+        title: z.string().optional().describe('新标题'),
+        markdown: z.string().optional().describe('更新后的 Markdown 正文'),
+        status: z.enum(['draft', 'exported', 'archived']).optional().describe('草稿状态'),
+      },
+    },
+    async ({ id, title, markdown, status }) => {
+      try {
+        const response = await fetchPrivatePortal(`/api/drafts/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ title, markdown, status }),
+        });
+        return textResult(await response.json());
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
+  log('registered private inbox & drafts tools (7 tools)');
+}
+
 async function main(): Promise<void> {
   const server = new McpServer({ name: 'josh-portal', version: '0.1.0' });
 
@@ -177,6 +392,7 @@ async function main(): Promise<void> {
         const manifest = await loadManifest();
         return textResult({
           portal: PORTAL_URL,
+          privateInboxEnabled: Boolean(PRIVATE_API_TOKEN),
           plugins: manifest.plugins.map((plugin) => ({
             id: plugin.id,
             name: plugin.name,
@@ -246,6 +462,10 @@ async function main(): Promise<void> {
       }
     },
   );
+
+  if (PRIVATE_API_TOKEN) {
+    registerPrivateTools(server);
+  }
 
   let manifest: Manifest | null = null;
   try {

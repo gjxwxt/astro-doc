@@ -4,8 +4,9 @@
       "command": "node",
       "args": ["/absolute/path/to/astro-doc/packages/mcp-server/dist/index.js"],
       "env": {
-        "PORTAL_URL": "http://localhost:3005",
-        "PORTAL_API_TOKEN": ""
+        "PORTAL_URL": "http://localhost:4400",
+        "PORTAL_API_TOKEN": "",
+        "PRIVATE_API_TOKEN": ""
       }
     }
   }

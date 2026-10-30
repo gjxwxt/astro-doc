@@ -230,7 +230,7 @@ async function imageContext(tabId, src) {
 async function saveSelection(info, tab) {
   const { baseUrl, token } = await config();
   if (!token) {
-    await flashBadge('!', '#b84f3e');
+    await notify(tab?.id, '先在扩展设置里填入 Token。', 'error');
     return;
   }
   if (!tab?.id) {
@@ -269,14 +269,14 @@ async function saveSelection(info, tab) {
     });
 
     if (response.status === 409) {
-      await flashBadge('·', '#e3b45f');
+      await notify(tab.id, '这段话已经在 Inbox 里了。');
       return;
     }
     if (!response.ok) throw new Error(`保存失败（${response.status}）`);
-    await flashBadge('✓', '#2b4a33');
+    await notify(tab.id, tag ? `已存入 Inbox · #${tag}` : '已存入 Inbox。');
     await rebuildMenus();
   } catch {
-    await flashBadge('!', '#b84f3e');
+    await notify(tab.id, '保存选段失败，稍后再试。', 'error');
   }
 }
 

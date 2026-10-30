@@ -61,10 +61,23 @@ Cursor、Windsurf、opencode 等客户端的配置形状类似：命令 `node`�
 
 | 变量 | 默认 | 说明 |
 | --- | --- | --- |
-| `PORTAL_URL` | `http://localhost:4321` | 门户地址；开发时设成 `http://localhost:3005` |
+| `PORTAL_URL` | `http://localhost:4321` | 门户地址；开发时设成 `http://localhost:4400` |
 | `PORTAL_API_TOKEN` | 空 | 和站点 `.env` 的 `PORTAL_API_TOKEN` 一致；站点没设就不需要 |
+| `PRIVATE_API_TOKEN` | 空 | 和站点 `.env` 的 `PRIVATE_API_TOKEN` 一致；配置后启用私有 Inbox 与草稿箱工具 |
 
 如果站点设置了 `PORTAL_API_TOKEN`，MCP 请求必须带 Bearer；浏览器里的工具 UI 通过 `Sec-Fetch-Site` 放行，不需要 token。
+
+如果配置了 `PRIVATE_API_TOKEN`，MCP 会额外注册私有工作台工具（不配置时不暴露任何私有 tool）：
+
+| Tool | 作用 |
+| --- | --- |
+| `inbox_list_fragments` | 搜索或按标签/日期筛选私有 Inbox 碎片 |
+| `inbox_get_fragment` | 按 ID 读取单条私有碎片的原文、上下文、随想与元数据 |
+| `inbox_save_fragment` | 从本地客户端直接保存文字摘录或网页链接到 Inbox |
+| `inbox_update_fragment` | 修改碎片的随想、标签或归档状态 |
+| `drafts_list` | 列出合成草稿箱中的文章草稿 |
+| `drafts_get` | 读取草稿详情，或以 `format: "markdown"` 直接导出带 frontmatter 与来源附录的完整 Markdown |
+| `drafts_update` | 将本地编辑后的标题、Markdown 正文或状态写回草稿箱 |
 
 ## 4. 工具列表
 

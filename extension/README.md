@@ -18,7 +18,7 @@ Chrome / Edge Manifest V3 的最小采集插件。选中文字时保存引用，
 ## 行为
 
 - 选中文字：`POST /api/fragments`，保存原文、前后各 500 字上下文、标题、URL、站点、随想和标签。
-- 选中文字右键：直接按标签保存，不打开弹窗；标签来自 Inbox 已有标签。
+- 选中文字右键：直接按标签保存，不打开弹窗；保存结果用页面顶部小气泡提示，标签来自 Inbox 已有标签。
 - 右键链接：`POST /api/fragments/link`，服务端生成链接卡片；保存结果用页面顶部的小气泡提示，失败时退回扩展 badge。
 - 右键图片：`POST /api/fragments`，`kind: 'image'`，只保存远程 `src`、来源页和 alt；图片不下载、不转存。
 - 批量标注：扩展在页面注入一个 Shadow DOM 面板，只收集 `quote` / 上下文 / 标题 / URL / 站点；保存时后台按同一 `groupId` 逐条 `POST /api/fragments`，Inbox 会把它们收成一张“同页”组卡片。单次最多 50 段，每段正文上限 20,000 字符。
