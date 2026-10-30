@@ -41,8 +41,22 @@
 - 图片 URL → 自动存为图片碎片
 - 普通 URL → 保存链接（带预览）
 - 本地图片路径 → 通过 preload 读取并上传
-- 备注、标签、来源 URL
+- 备注、**一个可选的分类标签**、来源 URL
+- 标签留空也正常保存；秒存不强制分类
 - `⌘/Ctrl + Enter` 保存
+
+## 本地开发配置
+
+如果不想每次在 uTools 设置里填 Token，可以复制：
+
+```bash
+cp utools-plugin/josh-capture/config.example.json \
+   utools-plugin/josh-capture/config.local.json
+```
+
+然后填 `portalUrl`、`publicBaseUrl`、`token`。`config.local.json` 已在 `.gitignore` 里，不会被提交；插件启动时由 preload 读取，设置页仍可覆盖。
+
+改完 `plugin.json` / `preload.js` 后要在 uTools 开发者工具里重新加载插件。
 
 ## 限制
 

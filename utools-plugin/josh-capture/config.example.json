@@ -1,0 +1,5 @@
+{
+  "portalUrl": "http://127.0.0.1:4400",
+  "publicBaseUrl": "http://127.0.0.1:4400",
+  "token": "PRIVATE_API_TOKEN"
+}

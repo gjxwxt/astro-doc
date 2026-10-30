@@ -18,6 +18,28 @@ function expandHome(input) {
   return input;
 }
 
+
+let localConfig = null;
+try {
+  const baseDir = typeof __dirname === 'string' ? __dirname : process.cwd();
+  const candidates = [
+    path.join(baseDir, 'config.local.json'),
+    path.join(process.cwd(), 'config.local.json'),
+    path.join(process.cwd(), 'utools-plugin', 'josh-capture', 'config.local.json'),
+  ];
+  for (const configPath of candidates) {
+    if (!fs.existsSync(configPath)) continue;
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (parsed && typeof parsed === 'object') {
+      localConfig = parsed;
+      break;
+    }
+  }
+} catch {
+  localConfig = null;
+}
+window.joshLocalConfig = localConfig;
+
 window.joshLocal = {
   readImage(filePath) {
     const resolved = path.resolve(expandHome(String(filePath || '').trim()));

@@ -56,7 +56,12 @@ function loadSettings() {
       saved = null;
     }
   }
-  settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
+  const merged = { ...DEFAULT_SETTINGS, ...(saved || {}) };
+  const bundled = window.joshLocalConfig || {};
+  if (!merged.token && bundled.token) merged.token = bundled.token;
+  if (!merged.portalUrl && bundled.portalUrl) merged.portalUrl = bundled.portalUrl;
+  if (!merged.publicBaseUrl && bundled.publicBaseUrl) merged.publicBaseUrl = bundled.publicBaseUrl;
+  settings = merged;
   fillSettings();
 }
 
@@ -98,8 +103,14 @@ function setBusy(next) {
   els.saveButton.textContent = next ? '保存中…' : '存入 Inbox';
 }
 
-function normalizeTags(value) {
-  return [...new Set(String(value || '').split(/[,\s，、#]+/).map((tag) => tag.trim()).filter(Boolean))].slice(0, 20);
+function captureTags(value) {
+  // One optional tag at capture time. The server model still supports multiple
+  // tags for imports, AI suggestions and older data.
+  const first = String(value || '')
+    .split(/[,\s，、#]+/)
+    .map((tag) => tag.trim())
+    .find(Boolean);
+  return first ? [first] : [];
 }
 
 function isHttpUrl(value) {
@@ -199,7 +210,7 @@ async function saveLink(url) {
     body: JSON.stringify({
       url,
       note: els.note.value.trim(),
-      tags: normalizeTags(els.tags.value),
+      tags: captureTags(els.tags.value),
     }),
   });
 }
@@ -211,7 +222,7 @@ async function saveQuote(text, sourceUrl) {
       kind: 'quote',
       quote: text,
       note: els.note.value.trim(),
-      tags: normalizeTags(els.tags.value),
+      tags: captureTags(els.tags.value),
       ...(sourceUrl ? { sourceUrl } : {}),
     }),
   });
@@ -226,7 +237,7 @@ async function saveImageUrl(url) {
       kind: 'image',
       quote: alt,
       note: els.note.value.trim(),
-      tags: normalizeTags(els.tags.value),
+      tags: captureTags(els.tags.value),
       sourceUrl: source,
       metadata: { image: { src: url, pageUrl: source, alt } },
     }),
@@ -243,7 +254,7 @@ async function saveImageFile(file) {
       kind: 'image',
       quote: alt,
       note: els.note.value.trim(),
-      tags: normalizeTags(els.tags.value),
+      tags: captureTags(els.tags.value),
       sourceUrl: source,
       metadata: { image: { src: url, pageUrl: source, alt } },
     }),
