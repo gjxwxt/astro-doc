@@ -1,0 +1,54 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "josh-capture",
+  "title": "Josh Capture",
+  "description": "把任意应用的选中文字或链接一键存进 Josh Inbox，不打开窗口。",
+  "icon": "icon.png",
+  "author": "josh",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "capture-selection",
+      "title": "秒存到 Josh",
+      "description": "读取当前应用选中的文字，直接存入 Josh Inbox。",
+      "mode": "no-view",
+      "preferences": [
+        {
+          "name": "portalUrl",
+          "title": "门户地址",
+          "description": "例如 http://127.0.0.1:4400",
+          "type": "textfield",
+          "required": true,
+          "default": "http://127.0.0.1:4400"
+        },
+        {
+          "name": "token",
+          "title": "私有 API Token",
+          "description": "服务端 PRIVATE_API_TOKEN；只保存在 Raycast 扩展设置里。",
+          "type": "password",
+          "required": true
+        },
+        {
+          "name": "tag",
+          "title": "可选标签",
+          "description": "一个分类标签；留空则不分类。",
+          "type": "textfield",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^2.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "scripts": {
+    "build": "ray build -o dist",
+    "dev": "ray develop",
+    "lint": "ray lint"
+  }
+}

@@ -8,5 +8,5 @@
     "types": ["node"]
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "packages"]
+  "exclude": ["dist", "packages", "raycast-extension"]
 }

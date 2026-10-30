@@ -33,3 +33,8 @@ data/
 utools-plugin/josh-capture/config.local.json
 
 utools-plugin/josh-capture/config.local.js
+raycast-extension/*/node_modules/
+raycast-extension/*/dist/
+raycast-extension/*/config.local.*
+
+raycast-extension/*/raycast-env.d.ts
