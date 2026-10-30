@@ -162,14 +162,29 @@ export async function generateReview(
   if (!runtime) return { mode: 'rules', text: fallback, notice: '未配置 AI key，当前为规则模式。' };
 
   try {
+    const aiStats = {
+      weekNew: stats.weekTotal,
+      weekByDay: stats.byDay,
+      weekTopTags: stats.topTags,
+      weekKinds: stats.kinds,
+      weekSources: stats.sources,
+      inbox: stats.inbox,
+      archived: stats.archived,
+      libraryTotal: stats.total,
+      mediaLibraryTotal: stats.media,
+      draftsTotal: stats.drafts,
+    };
     const text = await chatText(runtime, {
       system: [
         '你是 Josh 私人知识库的周报助手。',
         '只根据给定的统计数据写一段中文回顾，120-220 字。',
+        'weekNew、weekByDay、weekTopTags、weekKinds、weekSources 都是本周数据。',
+        'mediaLibraryTotal 是整个媒体库的文件总数，draftsTotal 是草稿总数，libraryTotal 是碎片总数。',
+        '不要把媒体库总数或草稿总数说成本周新增、本周碎片的一部分。',
         '先总结本周新增、主要标签和来源，再给一个具体、温和的整理建议。',
         '不要编造数字，不要写 Markdown 标题，不要称呼用户为“您”。',
       ].join('\n'),
-      user: JSON.stringify(stats),
+      user: JSON.stringify(aiStats),
       maxTokens: 500,
       temperature: 0.4,
     });
