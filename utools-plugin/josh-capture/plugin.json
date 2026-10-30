@@ -39,7 +39,7 @@
     },
     {
       "code": "quick-selection",
-      "explain": "选中文字后一键存入 Josh Inbox，不打开编辑",
+      "explain": "选中文字后静默存入 Josh Inbox，不打开插件页面",
       "cmds": [
         {
           "type": "over",
@@ -47,7 +47,8 @@
           "minLength": 1,
           "maxLength": 20000
         }
-      ]
+      ],
+      "mainHide": true
     }
   ]
 }
