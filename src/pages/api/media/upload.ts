@@ -25,6 +25,49 @@ function formFile(form: FormData): File | null {
   return multiple ?? null;
 }
 
+function decodeFileName(raw: string | null): string {
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw).slice(0, 200);
+  } catch {
+    return raw.slice(0, 200);
+  }
+}
+
+interface UploadPayload {
+  bytes: Uint8Array;
+  filename: string;
+  mime: string;
+}
+
+async function readUpload(request: Request): Promise<UploadPayload | null> {
+  const contentType = request.headers.get('content-type') ?? '';
+  if (contentType.toLowerCase().startsWith('multipart/form-data')) {
+    const form = await request.formData();
+    const file = formFile(form);
+    if (!file) return null;
+    return {
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      filename: file.name.slice(0, 200),
+      mime: file.type,
+    };
+  }
+
+  if (
+    contentType.startsWith('image/') ||
+    contentType.startsWith('application/octet-stream')
+  ) {
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    return {
+      bytes,
+      filename: decodeFileName(request.headers.get('x-file-name')),
+      mime: contentType.split(';', 1)[0]?.trim() || 'application/octet-stream',
+    };
+  }
+
+  return null;
+}
+
 export const POST: APIRoute = async ({ request }) => {
   const auth = authenticate(request, process.env);
   if (!auth) {
@@ -44,23 +87,25 @@ export const POST: APIRoute = async ({ request }) => {
     return jsonError(413, 'IMAGE_TOO_LARGE', '图片不能超过 20MB。');
   }
 
-  let form: FormData;
+  let upload: UploadPayload | null;
   try {
-    form = await request.formData();
+    upload = await readUpload(request);
   } catch {
-    return jsonError(400, 'INVALID_FORM_DATA', '上传表单不合法。');
+    return jsonError(400, 'INVALID_UPLOAD', '上传内容不合法。');
+  }
+  if (!upload) {
+    return jsonError(
+      415,
+      'UNSUPPORTED_UPLOAD',
+      '请用 multipart/form-data 的 file 字段，或直接发送 image/* 二进制并带 X-File-Name。',
+    );
   }
 
-  const file = formFile(form);
-  if (!file) {
-    return jsonError(400, 'FILE_REQUIRED', '请用 multipart/form-data 的 file 字段上传图片。');
-  }
-  if (file.size === 0) return jsonError(400, 'EMPTY_FILE', '图片是空的。');
-  if (file.size > MAX_MEDIA_BYTES) {
+  const { bytes } = upload;
+  if (bytes.byteLength === 0) return jsonError(400, 'EMPTY_FILE', '图片是空的。');
+  if (bytes.byteLength > MAX_MEDIA_BYTES) {
     return jsonError(413, 'IMAGE_TOO_LARGE', '图片不能超过 20MB。');
   }
-
-  const bytes = new Uint8Array(await file.arrayBuffer());
   const detected = detectImageType(bytes);
   if (!detected) {
     return jsonError(
@@ -93,7 +138,7 @@ export const POST: APIRoute = async ({ request }) => {
       mime: detected.mime,
       ext: detected.ext,
       bytes: bytes.byteLength,
-      originalName: file.name.slice(0, 200),
+      originalName: upload.filename,
       storageDriver: 'local',
       storageKey: key,
       publicUrl: url,

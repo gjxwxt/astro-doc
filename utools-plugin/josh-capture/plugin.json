@@ -1,0 +1,22 @@
+{
+  "pluginName": "josh-capture",
+  "description": "把任意应用的选中文字、剪贴板图片和链接快速存进 Josh Inbox。",
+  "author": "Josh",
+  "homepage": "http://127.0.0.1:4400/inbox",
+  "version": "0.1.0",
+  "logo": "logo.png",
+  "main": "index.html",
+  "preload": "preload.js",
+  "features": [
+    {
+      "code": "capture",
+      "explain": "快速收藏文字、链接或图片到 Josh Inbox",
+      "cmds": ["josh", "Josh", "收藏"]
+    },
+    {
+      "code": "capture-image",
+      "explain": "收藏剪贴板/本地图片到 Josh Inbox",
+      "cmds": ["图片收藏", "josh image"]
+    }
+  ]
+}

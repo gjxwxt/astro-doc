@@ -12,7 +12,7 @@ const MAX_JSON_BYTES = 256_000;
 export function corsHeaders(): HeadersInit {
   return {
     'access-control-allow-origin': '*',
-    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-allow-headers': 'authorization, content-type, x-file-name',
     'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'access-control-max-age': '86400',
     'cache-control': 'no-store',

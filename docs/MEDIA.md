@@ -29,10 +29,13 @@ MEDIA_PUBLIC_BASE_URL=https://portal.example.com
 ```http
 POST /api/media/upload
 Authorization: Bearer <PRIVATE_API_TOKEN>
-Content-Type: multipart/form-data
+Content-Type: image/png
+X-File-Name: pasted.png
 
-file=<binary>
+<binary>
 ```
+
+也兼容 `multipart/form-data` 的 `file` 字段。浏览器扩展、uTools 和 Obsidian 插件使用原始二进制，避免表单跨域/CSRF 检查。
 
 成功：
 

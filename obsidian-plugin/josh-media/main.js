@@ -74,21 +74,6 @@ function joinUrl(base, maybeRelative) {
   return `${root}${maybeRelative.startsWith('/') ? '' : '/'}${maybeRelative}`;
 }
 
-function buildMultipart(bytes, filename, mime) {
-  const boundary = `----JoshMedia${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
-  const head = new TextEncoder().encode(
-    `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="${filename.replace(/["\r\n]/g, '_')}"\r\n` +
-      `Content-Type: ${mime}\r\n\r\n`,
-  );
-  const tail = new TextEncoder().encode(`\r\n--${boundary}--\r\n`);
-  const body = new Uint8Array(head.length + bytes.byteLength + tail.length);
-  body.set(head, 0);
-  body.set(bytes, head.length);
-  body.set(tail, head.length + bytes.byteLength);
-  return { boundary, body: body.buffer };
-}
-
 async function responseError(response) {
   try {
     const payload = JSON.parse(response.text);
@@ -308,15 +293,15 @@ module.exports = class JoshMediaPlugin extends Plugin {
     if (!base) throw new Error('未配置门户地址');
     if (!settings.token) throw new Error('未配置私有 API Token');
 
-    const { boundary, body } = buildMultipart(bytes, filename, mime);
     const response = await requestUrl({
       url: `${base}/api/media/upload`,
       method: 'POST',
       headers: {
         authorization: `Bearer ${settings.token}`,
-        'content-type': `multipart/form-data; boundary=${boundary}`,
+        'content-type': mime || mimeOf(filename),
+        'x-file-name': encodeURIComponent(filename),
       },
-      body,
+      body: bytes.buffer,
       throw: false,
     });
     if (response.status < 200 || response.status >= 300) {

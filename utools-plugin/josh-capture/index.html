@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Josh 快速收藏</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">J</span>
+          <div>
+            <strong>Josh 快速收藏</strong>
+            <span class="brand-sub">Any app → Inbox</span>
+          </div>
+        </div>
+        <button id="settingsButton" class="icon-button" type="button" title="设置">设置</button>
+      </header>
+
+      <section id="capturePanel" class="panel">
+        <div class="mode-row" role="tablist" aria-label="保存类型">
+          <button class="mode is-active" data-mode="auto" type="button">自动</button>
+          <button class="mode" data-mode="quote" type="button">引用</button>
+          <button class="mode" data-mode="link" type="button">链接</button>
+          <button class="mode" data-mode="image" type="button">图片</button>
+        </div>
+
+        <label class="field">
+          <span class="field-label">内容</span>
+          <textarea id="content" rows="5" placeholder="粘贴文字、链接或图片…"></textarea>
+        </label>
+
+        <div id="imageList" class="image-list" hidden></div>
+
+        <div class="meta-grid">
+          <label class="field">
+            <span class="field-label">备注</span>
+            <input id="note" type="text" placeholder="为什么留下它（可选）" />
+          </label>
+          <label class="field">
+            <span class="field-label">标签</span>
+            <input id="tags" type="text" placeholder="ai, 写作（可选）" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">来源 URL</span>
+          <input id="sourceUrl" type="url" placeholder="https://…（可选）" />
+        </label>
+
+        <div class="actions">
+          <div class="secondary-actions">
+            <button id="readClipboard" class="ghost" type="button">读剪贴板</button>
+            <button id="readClipboardImage" class="ghost" type="button">读图片</button>
+            <button id="pickImage" class="ghost" type="button">选图片</button>
+            <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden />
+          </div>
+          <button id="saveButton" class="primary" type="button">存入 Inbox</button>
+        </div>
+
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="settingsPanel" class="panel settings" hidden>
+        <h2>连接 Josh</h2>
+        <label class="field">
+          <span class="field-label">门户地址</span>
+          <input id="portalUrl" type="url" placeholder="http://127.0.0.1:4400" />
+        </label>
+        <label class="field">
+          <span class="field-label">图片公开地址</span>
+          <input id="publicBaseUrl" type="url" placeholder="https://portal.example.com" />
+        </label>
+        <label class="field">
+          <span class="field-label">私有 API Token</span>
+          <input id="token" type="password" placeholder="PRIVATE_API_TOKEN" />
+        </label>
+        <p class="hint">图片公开地址留空则使用门户地址；手机访问时必须填服务器可访问地址。</p>
+        <div class="actions">
+          <button id="testButton" class="ghost" type="button">测试连接</button>
+          <button id="saveSettingsButton" class="primary" type="button">保存设置</button>
+        </div>
+        <p id="settingsStatus" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
