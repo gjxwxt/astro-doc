@@ -2143,6 +2143,10 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 
+.image-liquid-action[hidden] {
+  display: none;
+}
+
 .image-liquid-action:hover,
 .image-liquid-action:focus-visible {
   background: rgb(255 255 255 / 0.18);
@@ -3837,6 +3841,16 @@
 .media-action:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.media-action--danger {
+  margin-left: auto;
+  color: var(--red);
+}
+
+.media-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .media-empty {

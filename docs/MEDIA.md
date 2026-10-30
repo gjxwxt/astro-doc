@@ -62,6 +62,35 @@ GET /media/<hash>.<ext>
 Cache-Control: public, max-age=31536000, immutable
 ```
 
+## 私有媒体库
+
+登录后访问：
+
+```text
+https://<portal>/media
+```
+
+支持浏览、拖入/粘贴上传、复制链接、分页，以及删除未被引用的图片。页面使用 HttpOnly 登录态，不把 API Token 写进浏览器。
+
+把已存在的远程图片转存到本地：
+
+```http
+POST /api/media/import
+Content-Type: application/json
+
+{"fragmentId": "<fragment-id>"}
+```
+
+也可以直接传 `{"url":"https://..."}`。服务端只抓取公网 http(s) 图片，校验 content-type 与 20MB 上限；成功后创建媒体记录，并在传 `fragmentId` 时把碎片的 `metadata.image.src` 改成媒体库地址，同时保留 `remoteSrc`。
+
+删除：
+
+```http
+DELETE /api/media/<media-id>
+```
+
+如果碎片或草稿仍在引用这张图片，返回 `409 MEDIA_REFERENCED`；处理引用后再删，文件会一起移除。
+
 ## 后续迁移
 
 `media` 表保留 `storage_driver`、`storage_key`、`public_url`。换对象存储时：

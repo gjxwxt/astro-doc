@@ -121,6 +121,31 @@ export function listMedia(
   };
 }
 
+export function countMediaReferences(
+  db: DatabaseSync,
+  ownerId: string,
+  storageKey: string,
+): number {
+  const pattern = `%${storageKey}%`;
+  const row = db
+    .prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM fragments
+          WHERE owner_id = ? AND deleted_at IS NULL AND metadata_json LIKE ?) +
+        (SELECT COUNT(*) FROM drafts
+          WHERE owner_id = ? AND deleted_at IS NULL AND markdown LIKE ?) AS count`,
+    )
+    .get(ownerId, pattern, ownerId, pattern) as { count: number | bigint };
+  return Number(row.count);
+}
+
+export function deleteMedia(db: DatabaseSync, ownerId: string, id: string): boolean {
+  const result = db
+    .prepare('DELETE FROM media WHERE id = ? AND owner_id = ?')
+    .run(id, ownerId);
+  return Number(result.changes) > 0;
+}
+
 export function createMedia(
   db: DatabaseSync,
   ownerId: string,

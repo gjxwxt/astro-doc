@@ -460,6 +460,34 @@ export function updateFragment(
   }
 }
 
+export function updateFragmentImage(
+  db: DatabaseSync,
+  ownerId: string,
+  id: string,
+  image: Record<string, unknown>,
+): Fragment | null {
+  const existing = getFragment(db, ownerId, id);
+  if (!existing || existing.kind !== 'image') return null;
+
+  const currentImage =
+    existing.metadata.image && typeof existing.metadata.image === 'object'
+      ? (existing.metadata.image as Record<string, unknown>)
+      : {};
+  const metadata = JSON.stringify({
+    ...existing.metadata,
+    image: { ...currentImage, ...image },
+  });
+  if (metadata.length > 20_000) throw new FragmentError('INVALID_INPUT', 'metadata 太大。');
+
+  const now = new Date().toISOString();
+  db.prepare(
+    `UPDATE fragments
+     SET metadata_json = ?, updated_at = ?
+     WHERE id = ? AND owner_id = ? AND kind = 'image' AND deleted_at IS NULL`,
+  ).run(metadata, now, id, ownerId);
+  return getFragment(db, ownerId, id);
+}
+
 export function softDeleteFragment(db: DatabaseSync, ownerId: string, id: string): boolean {
   const now = new Date().toISOString();
   const result = db

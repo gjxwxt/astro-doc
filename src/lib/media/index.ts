@@ -129,3 +129,14 @@ export async function readLocalMedia(
     throw error;
   }
 }
+
+export async function removeLocalMedia(
+  key: string,
+  env: Record<string, string | undefined> = process.env,
+): Promise<void> {
+  try {
+    await unlink(localMediaPath(key, env));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}

@@ -93,7 +93,7 @@ function formatDate(value: string): string {
       ) : (
         <section class="media-grid" aria-label="媒体文件">
           {mediaItems.map((item) => (
-            <article class="media-card">
+            <article class="media-card" data-media-id={item.id}>
               <a
                 class="media-thumb"
                 href={item.displayUrl}
@@ -129,6 +129,13 @@ function formatDate(value: string): string {
                   <a class="media-action" href={item.displayUrl} target="_blank" rel="noreferrer">
                     原图
                   </a>
+                  <button
+                    class="media-action media-action--danger"
+                    type="button"
+                    data-delete-media={item.id}
+                  >
+                    删除
+                  </button>
                 </div>
               </div>
             </article>
@@ -269,9 +276,15 @@ function formatDate(value: string): string {
 
   document.addEventListener('click', async (event) => {
     const button = event.target instanceof Element
-      ? event.target.closest('[data-copy-url]')
+      ? event.target.closest<HTMLButtonElement>('[data-copy-url], [data-delete-media]')
       : null;
-    if (!(button instanceof HTMLButtonElement)) return;
+    if (!button) return;
+
+    if (button.dataset.deleteMedia) {
+      await deleteMedia(button.dataset.deleteMedia, button);
+      return;
+    }
+
     const url = button.dataset.copyUrl;
     if (!url) return;
     try {
@@ -283,4 +296,27 @@ function formatDate(value: string): string {
       setStatus('复制失败，请打开原图后复制地址。', 'error');
     }
   });
+
+  async function deleteMedia(id: string, button: HTMLButtonElement) {
+    if (!window.confirm('删除这张图片？如果还有碎片或草稿引用它，会先阻止删除。')) return;
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/media/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (response.status === 401) {
+        window.location.assign('/login?next=/media');
+        return;
+      }
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        setStatus(payload?.error?.message || `删除失败（${response.status}）`, 'error');
+        button.disabled = false;
+        return;
+      }
+      setStatus('已删除，正在刷新…', 'ok');
+      window.setTimeout(() => window.location.reload(), 350);
+    } catch {
+      setStatus('删除请求失败，请重试。', 'error');
+      button.disabled = false;
+    }
+  }
 </script>

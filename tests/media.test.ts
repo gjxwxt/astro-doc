@@ -4,7 +4,15 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { openDatabase } from '@/lib/db/client';
-import { createMedia, getMediaByHash, listMedia } from '@/lib/db/media';
+import { createFragment, getFragment, updateFragmentImage } from '@/lib/db/fragments';
+import {
+  countMediaReferences,
+  createMedia,
+  deleteMedia,
+  getMedia,
+  getMediaByHash,
+  listMedia,
+} from '@/lib/db/media';
 import {
   MAX_MEDIA_BYTES,
   detectImageType,
@@ -113,6 +121,40 @@ describe('media storage and database', () => {
       const all = listMedia(db, 'local', { limit: 10 }).media.map((item) => item.originalName);
       expect(all).toContain('second.jpg');
       expect(listMedia(db, 'local', { limit: 10, offset: 1 }).media).toHaveLength(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  it('counts references, rewrites fragment images and deletes media', () => {
+    const db = openDatabase(':memory:');
+    try {
+      const hash = sha256(png);
+      const key = mediaKey(hash, 'png');
+      const created = createMedia(db, 'local', {
+        hash,
+        mime: 'image/png',
+        ext: 'png',
+        bytes: png.byteLength,
+        storageKey: key,
+        publicUrl: `/media/${key}`,
+      });
+      const { fragment } = createFragment(db, 'local', {
+        kind: 'image',
+        quote: 'remote image',
+        metadata: { image: { src: 'https://example.com/a.png', alt: 'a' } },
+      });
+
+      const updated = updateFragmentImage(db, 'local', fragment.id, {
+        src: `/media/${key}`,
+        remoteSrc: 'https://example.com/a.png',
+        transferred: true,
+      });
+      expect((updated?.metadata.image as { src: string }).src).toBe(`/media/${key}`);
+      expect((getFragment(db, 'local', fragment.id)?.metadata.image as { transferred: boolean }).transferred).toBe(true);
+      expect(countMediaReferences(db, 'local', key)).toBe(1);
+      expect(deleteMedia(db, 'local', created.media.id)).toBe(true);
+      expect(getMedia(db, 'local', created.media.id)).toBeNull();
     } finally {
       db.close();
     }
