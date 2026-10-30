@@ -3,7 +3,7 @@
   "description": "把任意应用的选中文字、剪贴板图片和链接快速存进 Josh Inbox。",
   "author": "Josh",
   "homepage": "http://127.0.0.1:4400/inbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "logo": "logo.png",
   "main": "index.html",
   "preload": "preload.js",
@@ -11,12 +11,43 @@
     {
       "code": "capture",
       "explain": "快速收藏文字、链接或图片到 Josh Inbox",
-      "cmds": ["josh", "Josh", "收藏"]
+      "cmds": [
+        "josh",
+        "Josh",
+        "收藏"
+      ]
     },
     {
       "code": "capture-image",
       "explain": "收藏剪贴板/本地图片到 Josh Inbox",
-      "cmds": ["图片收藏", "josh image"]
+      "cmds": [
+        "图片收藏",
+        "josh image"
+      ]
+    },
+    {
+      "code": "capture-selection",
+      "explain": "收集选中的文字到 Josh Inbox，可补标签和备注",
+      "cmds": [
+        {
+          "type": "over",
+          "label": "收藏到 Josh",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      ]
+    },
+    {
+      "code": "quick-selection",
+      "explain": "选中文字后一键存入 Josh Inbox，不打开编辑",
+      "cmds": [
+        {
+          "type": "over",
+          "label": "秒存到 Josh",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      ]
     }
   ]
 }

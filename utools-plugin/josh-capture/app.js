@@ -508,20 +508,67 @@ function bind() {
   });
 }
 
+async function quickSaveSelection(value) {
+  const text = String(value || '').trim();
+  if (!text) return;
+  try {
+    if (isImageUrl(text)) {
+      const alt = altFromName(new URL(text).pathname);
+      await api('/api/fragments', {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: 'image',
+          quote: alt,
+          sourceUrl: text,
+          metadata: { image: { src: text, pageUrl: text, alt } },
+        }),
+      });
+    } else if (isHttpUrl(text)) {
+      await api('/api/fragments/link', {
+        method: 'POST',
+        body: JSON.stringify({ url: text }),
+      });
+    } else {
+      await api('/api/fragments', {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'quote', quote: text }),
+      });
+    }
+    notify('Josh：已存入 Inbox');
+    window.setTimeout(() => window.utools?.outPlugin?.(), 220);
+  } catch (error) {
+    if (error && error.status === 409) {
+      notify('Josh：这条已经在 Inbox 里了');
+      window.setTimeout(() => window.utools?.outPlugin?.(), 220);
+      return;
+    }
+    els.content.value = text;
+    setStatus(els.status, `秒存失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+  }
+}
+
 function handleEnter(enter) {
+  const code = enter?.code;
   const type = enter?.type;
   const payload = enter?.payload;
   clearCapture();
   showSettings(false);
   loadSettings();
 
-  if (typeof payload === 'string' && payload.trim()) {
-    if (type === 'img' && payload.startsWith('data:image/')) {
-      const match = payload.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  const payloadText = typeof payload === 'string' ? payload.trim() : '';
+  if (code === 'quick-selection' && payloadText) {
+    els.content.value = payloadText;
+    void quickSaveSelection(payloadText);
+    return;
+  }
+
+  if (payloadText) {
+    if (type === 'img' && payloadText.startsWith('data:image/')) {
+      const match = payloadText.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
       if (match) addBase64Image(`clipboard.${extFromMime(match[1])}`, match[1], match[2]);
     } else {
-      els.content.value = payload.trim();
-      if (looksLikeImagePath(payload.trim())) void addLocalPath(payload.trim());
+      els.content.value = payloadText;
+      if (looksLikeImagePath(payloadText)) void addLocalPath(payloadText);
     }
   } else if (Array.isArray(payload) && payload.length > 0) {
     for (const item of payload) {
