@@ -531,6 +531,7 @@ async function quickSaveSelection(value) {
   if (!text) return;
   loadSettings();
   if (!settings.token) {
+    window.utools?.showMainWindow?.();
     els.content.value = text;
     showSettings(true);
     setStatus(
@@ -571,6 +572,7 @@ async function quickSaveSelection(value) {
       window.setTimeout(() => window.utools?.outPlugin?.(), 220);
       return;
     }
+    window.utools?.showMainWindow?.();
     els.content.value = text;
     setStatus(els.status, `秒存失败：${error instanceof Error ? error.message : String(error)}`, 'error');
     if (error && error.status === 401) {
@@ -584,16 +586,23 @@ function handleEnter(enter) {
   const code = enter?.code;
   const type = enter?.type;
   const payload = enter?.payload;
-  clearCapture();
-  showSettings(false);
-  loadSettings();
-
   const payloadText = typeof payload === 'string' ? payload.trim() : '';
+
   if (code === 'quick-selection' && payloadText) {
+    // Silent capture: hide the uTools window before any DOM work or network.
+    // If anything fails, quickSaveSelection calls showMainWindow again.
+    window.utools?.hideMainWindow?.();
+    clearCapture();
+    showSettings(false);
+    loadSettings();
     els.content.value = payloadText;
     void quickSaveSelection(payloadText);
     return;
   }
+
+  clearCapture();
+  showSettings(false);
+  loadSettings();
 
   if (payloadText) {
     if (type === 'img' && payloadText.startsWith('data:image/')) {
