@@ -1,0 +1,9 @@
+{
+  "id": "josh-media",
+  "name": "Josh Media",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "把粘贴的图片、图片地址和本地路径上传到 Josh 私有媒体库。",
+  "author": "Josh",
+  "isDesktopOnly": true
+}

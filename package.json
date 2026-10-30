@@ -19,6 +19,7 @@
     "db:backup": "tsx scripts/backup-db.ts",
     "db:restore": "tsx scripts/restore-db.ts",
     "sync:notes": "tsx scripts/sync-content.ts",
+    "media:migrate": "tsx scripts/migrate-obsidian-images.ts",
     "sync:library": "tsx scripts/sync-obsidian.ts",
     "sync:notes:watch": "tsx scripts/sync-content.ts --watch",
     "new:note": "tsx scripts/new-note.ts",

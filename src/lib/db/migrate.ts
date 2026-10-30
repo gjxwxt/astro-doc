@@ -124,6 +124,36 @@ const migrations: Migration[] = [
         WHERE deleted_at IS NULL AND group_id IS NOT NULL;
     `,
   },
+  {
+    version: 4,
+    name: 'media-library',
+    sql: `
+      CREATE TABLE IF NOT EXISTS media (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL,
+        hash TEXT NOT NULL,
+        mime TEXT NOT NULL,
+        ext TEXT NOT NULL,
+        bytes INTEGER NOT NULL,
+        width INTEGER,
+        height INTEGER,
+        original_name TEXT NOT NULL DEFAULT '',
+        storage_driver TEXT NOT NULL DEFAULT 'local',
+        storage_key TEXT NOT NULL,
+        public_url TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_media_owner_hash
+        ON media(owner_id, hash)
+        WHERE deleted_at IS NULL;
+
+      CREATE INDEX IF NOT EXISTS idx_media_created
+        ON media(owner_id, created_at DESC)
+        WHERE deleted_at IS NULL;
+    `,
+  },
 ];
 
 export function migrate(db: DatabaseSync): void {
