@@ -8,6 +8,7 @@ const BATCH_START_ID = 'josh-inbox-batch-start';
 const PAGE_EXPLODE_ID = 'josh-inbox-page-explode';
 const BATCH_SCRIPT = 'batch.js';
 const BATCH_MAX_ITEMS = 50;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 async function config() {
   const stored = await chrome.storage.local.get(['baseUrl', 'token']);
@@ -343,6 +344,54 @@ async function saveLink(info, tab) {
   }
 }
 
+function absoluteMediaUrl(baseUrl, value) {
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${baseUrl}${value.startsWith('/') ? '' : '/'}${value}`;
+}
+
+async function downloadImage(src) {
+  const response = await fetch(src, {
+    credentials: 'omit',
+    cache: 'no-store',
+    redirect: 'follow',
+  });
+  if (!response.ok) throw new Error(`下载图片失败（${response.status}）`);
+
+  const declared = Number(response.headers.get('content-length') || 0);
+  if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+    throw new Error('图片超过 20MB');
+  }
+  const contentType = String(response.headers.get('content-type') || '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase();
+  if (contentType && !contentType.startsWith('image/') && contentType !== 'application/octet-stream') {
+    throw new Error('远程内容不是图片');
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error('图片超过 20MB');
+  if (bytes.byteLength === 0) throw new Error('图片是空的');
+  return { bytes, contentType };
+}
+
+async function uploadImageToMedia(baseUrl, token, src, image) {
+  const response = await fetch(`${baseUrl}/api/media/upload`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': image.contentType || 'application/octet-stream',
+      'x-file-name': encodeURIComponent(filenameFromUrl(src) || 'image'),
+    },
+    body: image.bytes,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok || !data?.data?.url) {
+    throw new Error(data?.error?.message || `图片转存失败（${response.status}）`);
+  }
+  return absoluteMediaUrl(baseUrl, data.data.url);
+}
+
 async function saveImage(info, tab) {
   const { baseUrl, token } = await config();
   if (!token) {
@@ -360,10 +409,21 @@ async function saveImage(info, tab) {
     return;
   }
 
-  await notify(tab.id, '正在保存图片…', 'pending');
+  await notify(tab.id, '正在转存图片…', 'pending');
   try {
     const page = await imageContext(tab.id, src);
     const quote = page.alt || filenameFromUrl(src) || '图片';
+    let storedSrc = src;
+    let transferred = false;
+    try {
+      const image = await downloadImage(src);
+      storedSrc = await uploadImageToMedia(baseUrl, token, src, image);
+      transferred = true;
+    } catch (error) {
+      // Keep the original URL if the host blocks downloads or the file is unsupported.
+      console.warn('[josh:image-transfer]', error);
+    }
+
     const response = await fetch(`${baseUrl}/api/fragments`, {
       method: 'POST',
       headers: {
@@ -378,11 +438,13 @@ async function saveImage(info, tab) {
         sourceSite: page.site,
         metadata: {
           image: {
-            src,
+            src: storedSrc,
+            remoteSrc: transferred ? src : undefined,
             pageUrl: page.pageUrl,
             alt: page.alt,
             width: page.width,
             height: page.height,
+            transferred,
           },
         },
       }),
@@ -395,7 +457,11 @@ async function saveImage(info, tab) {
     if (!response.ok || !data.ok) {
       throw new Error(data?.error?.message || `保存失败（${response.status}）`);
     }
-    await notify(tab.id, '已保存图片到 Inbox。');
+    await notify(
+      tab.id,
+      transferred ? '图片已转存到 Josh 媒体库。' : '图片地址已保存（未能转存文件）。',
+      transferred ? 'success' : 'pending',
+    );
   } catch {
     await notify(tab.id, '保存图片失败，稍后再试。', 'error');
   }
