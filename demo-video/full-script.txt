@@ -1,0 +1,21 @@
+Every day, we save a little more. A quote from a browser. A link from a tab. A screenshot from a folder. A paragraph from a book. And then, mostly, we don't come back.
+
+The problem isn't capture. It's return.
+
+We save for a future self who never gets the file.
+
+So we built this: a small, private place for the things you mean to keep. One inbox. Not a feed. Not a social profile. Not another place to perform.
+
+Capture from the browser, from Obsidian, or from uTools. A selection, a whole page, a link, an image. Everything lands in the same inbox, with its source still attached. The URL, the title, the site, the moment you saved it.
+
+When you're ready, open Triage. The assistant reads what you saved and suggests a summary, a few tags, maybe a duplicate. Apply what helps. Ignore the rest. Nothing is rewritten behind your back.
+
+And when something no longer belongs, let it go. Delete is not a database operation. The card curls, the embers lift, and the inbox gets lighter.
+
+Some fragments want to become something more. Turn one into a draft. The source and citation come with it. Write in Markdown. Export the file. The loop closes in something you can actually use.
+
+Images are stored as content-addressed files. The index is SQLite. The database is one file. Media is a directory. You can copy it, inspect it, move it. The whole thing runs on one small server, behind a login. No analytics. No ads. No feed. Just your own archive, on your own terms.
+
+Every night, a snapshot. One command pulls it home. Not a service you hope stays online. And because the backup is just a file, restoring is boring, which is exactly what you want.
+
+A private place for what you keep. Save less. Return more.

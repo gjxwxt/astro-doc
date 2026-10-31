@@ -1,0 +1,5 @@
+Images are stored as content-addressed files. The index is SQLite. The database is one file. Media is a directory. You can copy it, inspect it, move it. The whole thing runs on one small server, behind a login. No analytics. No ads. No feed. Just your own archive, on your own terms.
+
+Every night, a snapshot. One command pulls it home. Not a service you hope stays online. And because the backup is just a file, restoring is boring, which is exactly what you want.
+
+A private place for what you keep. Save less. Return more.

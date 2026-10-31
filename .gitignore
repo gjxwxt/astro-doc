@@ -3,6 +3,10 @@ dist/
 .astro/
 .taste-skill/
 
+# local demo-video render output
+demo-video/.baocut-out/
+demo-video/*.wav
+
 # dependencies
 node_modules/
 packages/*/dist/

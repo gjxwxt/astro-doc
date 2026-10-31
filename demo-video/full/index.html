@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920,height=1080">
+<title>Bothy / 半亩 — full demo</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#f2f3ea}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans","Microsoft YaHei","Noto Sans CJK SC",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  *,*::before,*::after{box-sizing:border-box}
+  #root{position:relative;width:1920px;height:1080px;overflow:hidden;background:#f2f3ea;color:#132016;--ink:#132016;--ink-2:#39483d;--ink-3:#5d6a60;--panel:#f2f3ea;--accent:#c7f19c;--paper:#f2f3ea;--paper-2:#e6e8db;--forest:#1d3523;--lime:#c7f19c;--line:#d3d7c5;--amber:#e3b45f;--red:#d66a57}
+  #scene{position:absolute;inset:0;overflow:hidden;background:var(--paper)}
+  .layer{position:absolute;inset:0;overflow:hidden;will-change:opacity,transform}
+  .grain{position:absolute;inset:0;opacity:.24;background-image:radial-gradient(rgba(19,32,22,.18) .7px,transparent .7px);background-size:7px 7px;pointer-events:none}
+  .copy{opacity:0;transform:translateY(18px)}
+  .eyebrow{font-family:"SFMono-Regular",Menlo,Monaco,Consolas,monospace;font-size:23px;letter-spacing:.16em;text-transform:uppercase}
+  .mark-line{display:flex;align-items:baseline;gap:16px}
+  .mark-line .cn{font-family:"Songti SC","Noto Serif CJK SC",serif;font-size:40px;letter-spacing:.02em}
+  .mark-line .en{font-family:"SFMono-Regular",Menlo,monospace;font-size:16px;letter-spacing:.22em}
+  .screen{background:var(--forest);color:var(--paper)}
+  .screen-frame{position:absolute;left:760px;top:112px;width:1060px;border:1px solid rgba(199,241,156,.20);border-radius:16px;overflow:hidden;background:#e6e8db;box-shadow:0 28px 80px rgba(0,0,0,.34)}
+  .chrome{display:flex;align-items:center;gap:18px;height:38px;padding:0 16px;background:#e6e8db;border-bottom:1px solid #d3d7c5}
+  .dots{display:flex;gap:6px}.dots i{display:block;width:9px;height:9px;border-radius:50%;background:#c0c8b8}
+  .url{color:#5d6a60;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;letter-spacing:.02em}
+  .shot{width:100%;height:auto;display:block;filter:saturate(.98) contrast(1.01)}
+  .screen-copy{position:absolute;left:110px;top:150px;width:620px;color:var(--paper)}
+  .screen-copy .eyebrow{color:var(--lime)}
+  .screen-copy h2{margin:22px 0 22px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:82px;font-weight:400;line-height:.98;letter-spacing:-.035em}
+  .screen-copy p{margin:0;color:#d8dcc9;font-size:28px;line-height:1.55}
+  .screen-copy .mark{display:inline-block;margin-top:26px;padding:9px 14px;border:1px solid rgba(199,241,156,.42);border-radius:999px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px;letter-spacing:.06em}
+  .ann{position:absolute;border:1.5px solid rgba(199,241,156,.9);border-radius:12px;box-shadow:0 0 0 7px rgba(199,241,156,.07);opacity:0}
+  .ann-label{position:absolute;padding:7px 11px;border-radius:999px;background:var(--lime);color:#17260f;font-family:"SFMono-Regular",Menlo,monospace;font-size:16px;letter-spacing:.02em;white-space:nowrap;opacity:0}
+  .cursor{position:absolute;left:0;top:0;z-index:50;width:32px;height:42px;pointer-events:none;opacity:0;filter:drop-shadow(0 3px 5px rgba(8,20,12,.45))}
+  .cursor::before{content:"";position:absolute;left:0;top:0;width:32px;height:42px;background:#132016;clip-path:polygon(0 0,0 39px,9px 30px,15px 42px,22px 39px,16px 26px,32px 26px)}
+  .cursor::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:31px;background:var(--paper);clip-path:polygon(0 0,0 30px,7px 23px,12px 33px,17px 30px,12px 20px,24px 20px)}
+  .click-ring{position:absolute;left:0;top:0;z-index:7;width:28px;height:28px;margin:-14px 0 0 -14px;border:2px solid var(--lime);border-radius:50%;pointer-events:none;opacity:0}
+  .caption{position:absolute;left:50%;bottom:52px;max-width:1180px;padding:10px 18px;transform:translateX(-50%);border:1px solid rgba(199,241,156,.20);border-radius:8px;background:rgba(8,18,11,.74);color:#f2f3ea;font-size:26px;line-height:1.35;text-align:center;opacity:0;letter-spacing:.005em}
+  .progress{position:absolute;left:0;bottom:0;height:3px;background:var(--lime);opacity:.75;width:0}
+
+  /* intro */
+  .intro-mark{position:absolute;left:110px;top:92px}
+  .intro-wrap{position:absolute;left:110px;top:238px;width:760px}
+  .intro-wrap h1{margin:22px 0 0;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:124px;font-weight:400;line-height:.92;letter-spacing:-.045em}
+  .intro-wrap h1 em{font-style:normal;color:var(--forest)}
+  .intro-wrap .lead{margin:32px 0 0;max-width:640px;color:var(--ink-2);font-size:30px;line-height:1.5}
+  .intro-wrap .note{margin:30px 0 0;color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:17px;line-height:1.7}
+  .cards{position:absolute;right:72px;top:140px;width:920px;height:820px}
+  .card{position:absolute;width:390px;padding:26px 28px 22px;background:#f7f7f0;border:1px solid #cfd5c5;border-radius:5px 12px 6px 10px;box-shadow:0 26px 54px rgba(8,20,12,.10);opacity:0}
+  .card .tag{color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+  .card .q{margin:15px 0 0;color:var(--ink);font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:29px;line-height:1.35}
+  .card .s{margin:15px 0 0;color:var(--ink-3);font-size:17px;line-height:1.45}
+  .card:nth-child(1){left:62px;top:30px;transform:rotate(-3.5deg)}
+  .card:nth-child(2){right:4px;top:258px;transform:rotate(2.6deg)}
+  .card:nth-child(3){left:112px;top:508px;transform:rotate(-1.2deg)}
+  .card .lip{position:absolute;right:20px;bottom:16px;width:50px;height:6px;background:var(--lime);opacity:.7}
+
+  /* problem */
+  .problem{background:var(--forest);color:var(--paper)}
+  .problem-copy{position:absolute;left:110px;top:170px;width:620px}
+  .problem-copy .eyebrow{color:var(--lime)}
+  .problem-copy h2{margin:24px 0 24px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:94px;line-height:.97;letter-spacing:-.035em;font-weight:400}
+  .problem-copy h2 em{font-style:normal;color:var(--lime)}
+  .problem-copy p{margin:0;color:#d8dcc9;font-size:29px;line-height:1.55}
+  .problem-copy .mark{display:inline-block;margin-top:28px;padding:8px 13px;border:1px solid rgba(199,241,156,.4);border-radius:999px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .lost-board{position:absolute;left:812px;top:120px;width:1010px;height:850px}
+  .lost-line{position:absolute;left:48px;top:78px;width:910px;height:1px;background:rgba(199,241,156,.24)}
+  .lost-card{position:absolute;width:420px;padding:22px 24px 20px;background:#f7f7f0;border:1px solid #cfd5c5;border-radius:5px 12px 6px 10px;box-shadow:0 20px 46px rgba(0,0,0,.24);opacity:0}
+  .lost-card .lab{display:flex;justify-content:space-between;color:#6d786c;font-family:"SFMono-Regular",Menlo,monospace;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+  .lost-card .body{margin:16px 0 0;color:#132016;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:28px;line-height:1.3}
+  .lost-card .src{margin:14px 0 0;color:#6d786c;font-family:"SFMono-Regular",Menlo,monospace;font-size:14px}
+  .lost-card:nth-of-type(1){left:20px;top:120px;transform:rotate(-3deg)}
+  .lost-card:nth-of-type(2){right:0;top:300px;transform:rotate(2.2deg)}
+  .lost-card:nth-of-type(3){left:130px;top:510px;transform:rotate(-1.4deg)}
+  .lost-stamp{position:absolute;right:38px;bottom:92px;padding:14px 18px;border:1px solid rgba(199,241,156,.48);border-radius:50%;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px;letter-spacing:.12em;transform:rotate(-8deg);opacity:.85}
+  .lost-foot{position:absolute;left:20px;bottom:52px;color:#a8b3a7;font-family:"SFMono-Regular",Menlo,monospace;font-size:16px;letter-spacing:.04em}
+
+  /* product */
+  .product{background:var(--paper)}
+  .product-copy{position:absolute;left:110px;top:170px;width:650px}
+  .product-copy .eyebrow{color:var(--ink-3)}
+  .product-copy h2{margin:24px 0 24px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:92px;line-height:.97;letter-spacing:-.035em;font-weight:400}
+  .product-copy h2 em{font-style:normal;color:var(--forest)}
+  .product-copy p{margin:0;color:var(--ink-2);font-size:29px;line-height:1.55}
+  .product-copy .mark{display:inline-block;margin-top:28px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .hub-wrap{position:absolute;left:800px;top:155px;width:1000px;height:780px}
+  .hub-line{position:absolute;left:50%;top:170px;width:1px;height:160px;background:linear-gradient(to bottom,transparent,var(--forest));opacity:.4}
+  .hub-card{position:absolute;left:250px;top:322px;width:500px;padding:30px 34px;background:#f7f7f0;border:1px solid #cfd5c5;border-radius:14px;box-shadow:0 30px 70px rgba(8,20,12,.13);opacity:0}
+  .hub-card .kicker{color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:14px;letter-spacing:.14em;text-transform:uppercase}
+  .hub-card h3{margin:12px 0 0;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:42px;font-weight:400;letter-spacing:-.02em}
+  .hub-card .row{display:flex;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid #d8ddce;color:#5d6a60;font-size:17px}
+  .source-node{position:absolute;padding:12px 16px;border:1px solid #cfd5c5;border-radius:999px;background:#f7f7f0;color:var(--ink);font-family:"SFMono-Regular",Menlo,monospace;font-size:17px;box-shadow:0 8px 20px rgba(8,20,12,.06);opacity:0}
+  .source-node:nth-of-type(1){left:50px;top:80px}
+  .source-node:nth-of-type(2){left:400px;top:42px}
+  .source-node:nth-of-type(3){right:28px;top:100px}
+  .source-dot{display:inline-block;width:8px;height:8px;margin-right:9px;border-radius:50%;background:var(--forest)}
+  .hub-note{position:absolute;left:250px;top:640px;color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:16px;letter-spacing:.03em}
+
+  /* capture */
+  .capture{background:var(--forest);color:var(--paper)}
+  .source-panels{position:absolute;left:750px;top:130px;width:1080px;height:790px}
+  .source-panel{position:absolute;width:300px;padding:18px;background:#f7f7f0;border:1px solid #cfd5c5;border-radius:10px;box-shadow:0 22px 48px rgba(0,0,0,.25);opacity:0;overflow:hidden}
+  .source-panel:nth-child(1){left:0;top:56px;transform:rotate(-2.4deg)}
+  .source-panel:nth-child(2){left:340px;top:20px;transform:rotate(1.2deg)}
+  .source-panel:nth-child(3){right:0;top:76px;transform:rotate(-1deg)}
+  .source-panel .head{display:flex;align-items:center;justify-content:space-between;padding-bottom:11px;border-bottom:1px solid #d8ddce;color:#5d6a60;font-family:"SFMono-Regular",Menlo,monospace;font-size:13px;letter-spacing:.06em}
+  .source-panel .head b{color:#132016;font-weight:600}
+  .source-panel .mini{margin-top:14px;color:#39483d;font-size:15px;line-height:1.5}
+  .source-panel .mini strong{color:#132016}
+  .source-panel .bar{height:7px;margin-top:10px;background:#dde2d4;border-radius:3px}
+  .source-panel .bar.short{width:62%}
+  .source-panel .sel{position:absolute;left:16px;right:16px;top:112px;padding:8px 10px;background:rgba(199,241,156,.52);border:1px solid rgba(19,32,22,.12);border-radius:5px;color:#132016;font-size:14px;line-height:1.4}
+  .source-panel .send{position:absolute;right:16px;bottom:16px;padding:8px 11px;border-radius:7px;background:var(--forest);color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:12px}
+  .source-panel .cmd{margin-top:18px;padding:15px 14px;border:1px solid #d8ddce;border-radius:8px;background:#eef0e7;color:#39483d;font-family:"SFMono-Regular",Menlo,monospace;font-size:13px;line-height:1.7}
+  .panel-label{position:absolute;bottom:118px;padding:6px 10px;border-radius:5px;background:rgba(19,32,22,.08);color:#5d6a60;font-family:"SFMono-Regular",Menlo,monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+  .source-panel:nth-child(1) .panel-label{left:0}
+  .source-panel:nth-child(2) .panel-label{left:340px}
+  .source-panel:nth-child(3) .panel-label{right:0}
+  .capture-receiver{position:absolute;left:50%;bottom:66px;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid rgba(199,241,156,.45);border-radius:999px;background:rgba(199,241,156,.07);color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:16px;letter-spacing:.04em}
+  .recv-dot{width:7px;height:7px;border-radius:50%;background:var(--lime)}
+  .capture-foot{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);color:#a8b3a7;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;letter-spacing:.04em;white-space:nowrap}
+
+  /* screenshot scenes */
+  .screens-copy{position:absolute;left:110px;top:150px;width:620px;color:var(--paper)}
+  .screens-copy .eyebrow{color:var(--lime)}
+  .screens-copy h2{margin:22px 0 22px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:82px;line-height:.98;letter-spacing:-.035em;font-weight:400}
+  .screens-copy p{margin:0;color:#d8dcc9;font-size:28px;line-height:1.55}
+  .screens-copy .mark{display:inline-block;margin-top:26px;padding:8px 13px;border:1px solid rgba(199,241,156,.4);border-radius:999px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+
+  /* burn */
+  .burn-scene{background:var(--forest);color:var(--paper)}
+  .burn-copy{position:absolute;left:110px;top:160px;width:620px}
+  .burn-copy .eyebrow{color:var(--lime)}
+  .burn-copy h2{margin:22px 0 24px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:92px;font-weight:400;line-height:.98;letter-spacing:-.035em}
+  .burn-copy p{margin:0;color:#d8dcc9;font-size:29px;line-height:1.55}
+  .burn-copy .mark{display:inline-block;margin-top:26px;padding:8px 13px;border:1px solid rgba(199,241,156,.4);border-radius:999px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .burn-stage{position:absolute;left:790px;top:150px;width:980px;height:760px}
+  .burn-card{position:absolute;left:70px;top:60px;width:780px;padding:32px 38px 28px;background:#f7f7f0;border:1px solid #cfd5c5;border-radius:5px 12px 6px 10px;box-shadow:0 28px 70px rgba(0,0,0,.30);transform:rotate(-2deg);will-change:clip-path,transform,filter,opacity;overflow:visible}
+  .burn-card__meta{color:#5d6a60;font-family:"SFMono-Regular",Menlo,monospace;font-size:16px}
+  .burn-card__quote{margin:20px 0 18px;color:#132016;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:41px;line-height:1.24;letter-spacing:-.015em}
+  .burn-card__tags{display:flex;gap:7px}.burn-card__tags span{padding:4px 8px;border:1px solid #d3d7c5;border-radius:999px;color:#39483d;font-size:16px}
+  .burn-card__rule{height:1px;margin:24px 0 14px;background:#d3d7c5}
+  .burn-card__note{color:#5d6a60;font-size:17px}
+  .burn-fire{position:absolute;left:58px;width:804px;height:78px;pointer-events:none;opacity:0;z-index:30}
+  .burn-fire__glow{position:absolute;left:-5%;right:-5%;bottom:-18px;height:92px;background:radial-gradient(ellipse at 50% 100%,rgba(255,190,80,.62) 0%,rgba(234,88,12,.30) 42%,transparent 72%);filter:blur(10px)}
+  .burn-fire__char{position:absolute;left:0;right:0;bottom:0;height:18px;background:linear-gradient(to top,rgba(15,7,3,.98),rgba(60,25,8,.7) 45%,transparent);mix-blend-mode:multiply}
+  .burn-fire__line{position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent 0%,#ffb347 12%,#ff7a18 38%,#ffd08a 52%,#ea580c 68%,#ffb347 88%,transparent 100%);box-shadow:0 0 10px rgba(255,122,24,.8),0 0 26px rgba(234,88,12,.45)}
+  .burn-fire__lick{position:absolute;bottom:0;width:46px;height:62px;background:linear-gradient(to top,rgba(255,196,90,.75),rgba(234,88,12,.35) 48%,transparent);filter:blur(3px);transform-origin:50% 100%;clip-path:polygon(50% 0,66% 25%,58% 40%,80% 62%,66% 78%,88% 100%,12% 100%,32% 76%,16% 58%,38% 40%,28% 22%)}
+  .burn-fire__lick--a{left:12%}.burn-fire__lick--b{left:48%;width:54px;height:72px;opacity:.8}.burn-fire__lick--c{right:12%}
+  .burn-sparks{position:absolute;inset:0;pointer-events:none}
+  .burn-spark{position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:#ffd9a0;box-shadow:0 0 6px rgba(255,160,50,.95);animation:spark-fly 520ms ease-out infinite}
+  .burn-spark:nth-child(1){left:24%;animation-delay:-90ms}
+  .burn-spark:nth-child(2){left:57%;animation-delay:-270ms}
+  .burn-spark:nth-child(3){left:82%;animation-delay:-160ms}
+  @keyframes spark-fly{0%{opacity:.9;transform:translate(0,0) scale(1)}75%{opacity:.4;background:#a8a29e}100%{opacity:0;transform:translate(0,-34px) scale(.3)}}
+  .burn-ash{position:absolute;left:100px;bottom:86px;width:720px;height:2px;background:linear-gradient(90deg,transparent,rgba(210,180,130,.7),transparent);opacity:0;filter:blur(.4px)}
+  .burn-gone{position:absolute;left:100px;bottom:112px;color:rgba(242,243,234,.54);font-family:"SFMono-Regular",Menlo,monospace;font-size:19px;letter-spacing:.12em;opacity:0}
+
+  /* draft */
+  .draft{background:var(--paper);color:var(--ink)}
+  .draft-copy{position:absolute;left:110px;top:155px;width:610px}
+  .draft-copy .eyebrow{color:var(--ink-3)}
+  .draft-copy h2{margin:22px 0 22px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:86px;line-height:.97;letter-spacing:-.035em;font-weight:400}
+  .draft-copy h2 em{font-style:normal;color:var(--forest)}
+  .draft-copy p{margin:0;color:var(--ink-2);font-size:28px;line-height:1.55}
+  .draft-copy .mark{display:inline-block;margin-top:26px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .file-chip{position:absolute;left:110px;bottom:100px;padding:11px 15px;border:1px solid #cfd5c5;border-radius:7px;background:#f7f7f0;color:#39483d;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;opacity:0}
+  .draft-frame .ann{border-color:rgba(29,53,35,.7);box-shadow:0 0 0 7px rgba(29,53,35,.06)}
+  .draft-frame .ann-label{background:var(--forest);color:var(--lime)}
+
+  /* media */
+  .media{background:var(--forest);color:var(--paper)}
+  .hash-strip{position:absolute;left:110px;bottom:88px;display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid rgba(199,241,156,.28);border-radius:6px;background:rgba(199,241,156,.06);color:#a8b3a7;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;opacity:0}
+  .hash-strip b{color:var(--lime);font-weight:500}
+
+  /* privacy */
+  .privacy{background:var(--paper);color:var(--ink)}
+  .privacy-copy{position:absolute;left:110px;top:150px;width:620px}
+  .privacy-copy .eyebrow{color:var(--ink-3)}
+  .privacy-copy h2{margin:22px 0 22px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:90px;line-height:.97;letter-spacing:-.035em;font-weight:400}
+  .privacy-copy h2 em{font-style:normal;color:var(--forest)}
+  .privacy-copy p{margin:0;color:var(--ink-2);font-size:28px;line-height:1.55}
+  .privacy-copy .mark{display:inline-block;margin-top:26px;padding:8px 13px;border:1px solid var(--line);border-radius:999px;color:var(--ink-3);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .arch{position:absolute;left:780px;top:120px;width:1020px;height:800px}
+  .arch-node{position:absolute;padding:14px 18px;border:1px solid #cfd5c5;border-radius:9px;background:#f7f7f0;color:#132016;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;line-height:1.4;box-shadow:0 10px 28px rgba(8,20,12,.06);opacity:0}
+  .arch-node b{display:block;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;font-weight:600;margin-bottom:4px}
+  .arch-node small{color:#6d786c;font-size:13px}
+  .arch-node.sources{left:40px;top:80px;width:280px;padding:16px 18px}
+  .arch-node.portal{left:390px;top:230px;width:250px;padding:18px 20px;border-color:#9eb28f}
+  .arch-node.db{left:700px;top:170px;width:210px;padding:16px 18px}
+  .arch-node.media-node{left:700px;top:320px;width:210px;padding:16px 18px}
+  .arch-node.ai{left:390px;top:430px;width:250px;padding:16px 18px;border-style:dashed;color:#5d6a60}
+  .arch-node.backup{left:40px;top:470px;width:250px;padding:16px 18px;border-color:#9eb28f}
+  .arch-line{position:absolute;height:1px;background:#9eb28f;transform-origin:0 50%;opacity:0}
+  .arch-line.v{width:1px;height:110px;transform-origin:50% 0}
+  .arch-pulse{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--forest);box-shadow:0 0 0 4px rgba(29,53,35,.10);opacity:0}
+  .arch-note{position:absolute;right:40px;bottom:80px;max-width:410px;padding:16px 18px;border-left:2px solid var(--forest);color:#5d6a60;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;line-height:1.7;opacity:0}
+
+  /* backup */
+  .backup{background:var(--forest);color:var(--paper)}
+  .backup-copy{position:absolute;left:110px;top:162px;width:620px}
+  .backup-copy .eyebrow{color:var(--lime)}
+  .backup-copy h2{margin:22px 0 22px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:88px;line-height:.97;letter-spacing:-.035em;font-weight:400}
+  .backup-copy h2 em{font-style:normal;color:var(--lime)}
+  .backup-copy p{margin:0;color:#d8dcc9;font-size:28px;line-height:1.55}
+  .backup-copy .mark{display:inline-block;margin-top:26px;padding:8px 13px;border:1px solid rgba(199,241,156,.4);border-radius:999px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px}
+  .terminal-wrap{position:absolute;left:780px;top:125px;width:1000px;height:800px}
+  .terminal{position:absolute;left:0;top:20px;width:960px;border:1px solid rgba(199,241,156,.24);border-radius:12px;background:#0d1a11;box-shadow:0 30px 80px rgba(0,0,0,.36);overflow:hidden;opacity:0}
+  .terminal .tbar{display:flex;align-items:center;gap:9px;height:36px;padding:0 15px;background:#15271a;border-bottom:1px solid rgba(199,241,156,.12)}
+  .terminal .tbar i{width:8px;height:8px;border-radius:50%;background:#3e5a43}.terminal .tbar span{margin-left:9px;color:#77937b;font-family:"SFMono-Regular",Menlo,monospace;font-size:13px}
+  .terminal .tbody{padding:26px 30px 30px;color:#dce8d4;font-family:"SFMono-Regular",Menlo,monospace;font-size:20px;line-height:1.85}
+  .terminal .cmd{color:#c7f19c}.terminal .ok{color:#9ed37e}.terminal .dim{color:#77937b}
+  .manifest{position:absolute;left:470px;top:448px;width:490px;padding:20px 22px;border:1px solid #cfd5c5;border-radius:9px;background:#f7f7f0;color:#39483d;font-family:"SFMono-Regular",Menlo,monospace;font-size:15px;line-height:1.9;opacity:0;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+  .manifest b{color:#132016}
+  .manifest .tree{color:#6d786c}
+
+  /* close / end */
+  .closing{position:absolute;inset:0;background:var(--forest);color:var(--paper)}
+  .closing .mark-line{position:absolute;left:110px;top:90px}
+  .closing h2{position:absolute;left:110px;top:330px;margin:0;max-width:1300px;font-family:"Iowan Old Style","Baskerville","Songti SC",serif;font-size:122px;font-weight:400;line-height:.95;letter-spacing:-.04em}
+  .closing h2 em{font-style:normal;color:var(--lime)}
+  .closing .foot{position:absolute;left:110px;bottom:88px;display:flex;align-items:center;gap:20px;color:#a8b3a7;font-family:"SFMono-Regular",Menlo,monospace;font-size:17px;letter-spacing:.06em}
+  .closing .dot{width:8px;height:8px;border-radius:50%;background:var(--lime)}
+  .end{background:var(--forest);color:var(--paper)}
+  .end-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:1200px}
+  .end-inner .cn{font-family:"Songti SC","Noto Serif CJK SC",serif;font-size:72px;letter-spacing:.02em}
+  .end-inner .en{margin-top:8px;color:var(--lime);font-family:"SFMono-Regular",Menlo,monospace;font-size:18px;letter-spacing:.28em}
+  .end-inner p{margin:34px 0 0;color:#a8b3a7;font-family:"SFMono-Regular",Menlo,monospace;font-size:18px;line-height:1.8;letter-spacing:.03em}
+  .end-inner .url{margin-top:30px;color:#d8dcc9;font-family:"SFMono-Regular",Menlo,monospace;font-size:19px;letter-spacing:.04em}
+  .end-inner .rule{width:70px;height:1px;margin:30px auto;background:rgba(199,241,156,.42)}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="165" data-fps="30" data-alpha="false" data-aspect-ratio="16:9" data-structure="twelve scenes: intro, problem, product, capture, inbox, triage, burn, draft, media, privacy, backup, close" data-layout="full-frame editorial with screens and diagrams" data-motion="layered crossfade, cursor, callouts, burn, architecture">
+  <div id="scene">
+    <div class="layer" id="intro">
+      <div class="grain"></div>
+      <div class="intro-mark mark-line"><span class="cn">半亩</span><span class="en">BOTHY</span></div>
+      <div class="intro-wrap">
+        <div class="eyebrow copy" data-copy-primary>A private place for what you keep</div>
+        <h1 class="copy" data-copy-primary>Save less.<br><em>Return more.</em></h1>
+        <p class="lead copy" data-copy-primary>Capture a quote, a link, a screenshot. Then decide what deserves to stay.</p>
+        <p class="note copy" data-copy-secondary>Bothy / 半亩 · private knowledge portal</p>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="tag">01 / quote</div><p class="q">“A reading ritual should leave room for returning.”</p><p class="s">From a browser selection</p><span class="lip"></span></div>
+        <div class="card"><div class="tag">02 / link</div><p class="q">“Local-first software: you own your data, in spite of the cloud.”</p><p class="s">Saved with its source</p><span class="lip"></span></div>
+        <div class="card"><div class="tag">03 / image</div><p class="q">A calendar, a sketch, a page worth keeping.</p><p class="s">Content-addressed media</p><span class="lip"></span></div>
+      </div>
+    </div>
+
+    <div class="layer problem" id="problem">
+      <div class="grain"></div>
+      <div class="problem-copy">
+        <div class="eyebrow copy" data-copy-primary>01 / The loop</div>
+        <h2 class="copy" data-copy-primary>The problem<br>isn’t capture.<br><em>It’s return.</em></h2>
+        <p class="copy" data-copy-primary>We save for a future self who never gets the file.</p>
+        <span class="mark copy" data-copy-secondary>SAVED · NOT RETURNED</span>
+      </div>
+      <div class="lost-board">
+        <div class="lost-line"></div>
+        <div class="lost-card" data-lost="0"><div class="lab"><span>TAB / STILL OPEN</span><span>14:32</span></div><p class="body">“A reading ritual should leave room for returning.”</p><div class="src">source unknown · saved “later”</div></div>
+        <div class="lost-card" data-lost="1"><div class="lab"><span>PDF / DOWNLOADS</span><span>file (3)</span></div><p class="body">Local-first software, and the long way home.</p><div class="src">where did this come from?</div></div>
+        <div class="lost-card" data-lost="2"><div class="lab"><span>SCREENSHOT / DESKTOP</span><span>10.30</span></div><p class="body">A calendar, a sketch, a page worth keeping.</p><div class="src">no title · no context</div></div>
+        <div class="lost-stamp">RETURN?</div>
+        <div class="lost-foot">OPEN LOOPS · NOT A LIBRARY</div>
+      </div>
+    </div>
+
+    <div class="layer product" id="product">
+      <div class="grain"></div>
+      <div class="product-copy">
+        <div class="eyebrow copy" data-copy-primary>02 / One place</div>
+        <h2 class="copy" data-copy-primary>One inbox.<br><em>Not a feed.</em></h2>
+        <p class="copy" data-copy-primary>A private place for the things you mean to keep. No audience. No algorithm.</p>
+        <span class="mark copy" data-copy-secondary>PRIVATE BY DEFAULT</span>
+      </div>
+      <div class="hub-wrap">
+        <div class="hub-line"></div>
+        <div class="source-node"><span class="source-dot"></span>Chrome</div>
+        <div class="source-node"><span class="source-dot"></span>Obsidian</div>
+        <div class="source-node"><span class="source-dot"></span>uTools</div>
+        <div class="hub-card">
+          <div class="kicker">the quiet middle</div>
+          <h3>Your inbox</h3>
+          <div class="row"><span>quote · link · image · file</span><span>source attached</span></div>
+          <div class="row"><span>no public profile</span><span>no engagement</span></div>
+        </div>
+        <div class="hub-note">ONE SMALL PLACE · YOURS</div>
+      </div>
+    </div>
+
+    <div class="layer capture" id="capture">
+      <div class="grain"></div>
+      <div class="screens-copy">
+        <div class="eyebrow copy" data-copy-primary>03 / Capture</div>
+        <h2 class="copy" data-copy-primary>From anywhere<br>you read.</h2>
+        <p class="copy" data-copy-primary>A selection, a whole page, a link, an image. The source comes along.</p>
+        <span class="mark copy" data-copy-secondary>CHROME · OBSIDIAN · UTOOLS</span>
+      </div>
+      <div class="source-panels">
+        <div class="source-panel">
+          <div class="head"><b>Chrome</b><span>MV3</span></div>
+          <div class="sel">“The best notes are the ones you can find your way back to.”</div>
+          <div class="mini"><strong>Send selection</strong><br>to 半亩</div>
+          <div class="bar"></div><div class="bar short"></div>
+          <div class="send">SEND TO INBOX</div>
+        </div>
+        <div class="source-panel">
+          <div class="head"><b>Obsidian</b><span>PLUGIN</span></div>
+          <div class="mini"><strong>## A reading ritual</strong><br>Keep the source, leave the noise.</div>
+          <div class="cmd">[[reading-ritual]]<br><span># 数字花园</span></div>
+          <div class="bar"></div><div class="bar short"></div>
+          <div class="send">SHARE NOTE</div>
+        </div>
+        <div class="source-panel">
+          <div class="head"><b>uTools</b><span>⌘ SPACE</span></div>
+          <div class="mini"><strong>Paste a link.</strong><br>Or a quote. Or a file.</div>
+          <div class="cmd">paste a URL<br><span>→ 半亩 / inbox</span></div>
+          <div class="bar"></div><div class="bar short"></div>
+          <div class="send">CAPTURE</div>
+        </div>
+        <div class="capture-receiver"><span class="recv-dot"></span>one inbox</div>
+        <div class="capture-foot">ONE GESTURE · THREE DOORS</div>
+      </div>
+    </div>
+
+    <div class="layer screen" id="inbox">
+      <div class="grain"></div>
+      <div class="screen-frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">docs.gaojiaxiang.cn/inbox</span></div>
+        <img class="shot" src="assets/inbox.png" alt="">
+        <div class="ann" id="inbox-ann-src" style="left:128px;top:276px;width:360px;height:86px"></div>
+        <div class="ann-label" id="inbox-lab-src" style="left:128px;top:238px">source + timestamp</div>
+        <div class="ann" id="inbox-ann-tag" style="left:128px;top:376px;width:250px;height:34px"></div>
+        <div class="ann-label" id="inbox-lab-tag" style="left:128px;top:338px">tags, not folders</div>
+        <span class="cursor" data-cursor="inbox"></span><span class="click-ring" data-cursor-ring="inbox"></span>
+      </div>
+      <div class="screens-copy">
+        <div class="eyebrow copy" data-copy-primary>04 / Inbox</div>
+        <h2 class="copy" data-copy-primary>Everything keeps<br>its source.</h2>
+        <p class="copy" data-copy-primary>The URL, the title, the site, the moment you saved it. One private list, not a pile of orphans.</p>
+        <span class="mark copy" data-copy-secondary>NO FEED · NO AUDIENCE</span>
+      </div>
+    </div>
+
+    <div class="layer screen" id="triage">
+      <div class="grain"></div>
+      <div class="screen-frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">docs.gaojiaxiang.cn/organize</span></div>
+        <img class="shot" src="assets/organize.png" alt="">
+        <div class="ann" id="triage-ann-sum" style="left:128px;top:246px;width:300px;height:86px"></div>
+        <div class="ann-label" id="triage-lab-sum" style="left:128px;top:208px">summary</div>
+        <div class="ann" id="triage-ann-tags" style="left:128px;top:352px;width:250px;height:32px"></div>
+        <div class="ann-label" id="triage-lab-tags" style="left:128px;top:314px">suggested tags</div>
+        <div class="ann" id="triage-ann-dup" style="left:128px;top:440px;width:320px;height:48px"></div>
+        <div class="ann-label" id="triage-lab-dup" style="left:128px;top:402px">possible duplicate</div>
+        <span class="cursor" data-cursor="triage"></span><span class="click-ring" data-cursor-ring="triage"></span>
+      </div>
+      <div class="screens-copy">
+        <div class="eyebrow copy" data-copy-primary>05 / Triage</div>
+        <h2 class="copy" data-copy-primary>AI suggests.<br>You decide.</h2>
+        <p class="copy" data-copy-primary>A summary, a few tags, a duplicate. Apply what helps; ignore the rest. Nothing is rewritten behind your back.</p>
+        <span class="mark copy" data-copy-secondary>SUMMARY · TAGS · DUPLICATES</span>
+      </div>
+    </div>
+
+    <div class="layer burn-scene" id="burn">
+      <div class="grain"></div>
+      <div class="burn-copy">
+        <div class="eyebrow copy" data-copy-primary>06 / Let go</div>
+        <h2 class="copy" data-copy-primary>Delete is not<br>a database<br>operation.</h2>
+        <p class="copy" data-copy-primary>The card curls, the embers lift, and the inbox gets lighter.</p>
+        <span class="mark copy" data-copy-secondary>REMOVE · WITH A LITTLE CEREMONY</span>
+      </div>
+      <div class="burn-stage">
+        <div class="burn-card" id="burn-card">
+          <div class="burn-card__meta">摘录 / 10/30 / maggieappleton.com</div>
+          <p class="burn-card__quote">“It harkens back to the early days of the web when people had fewer notions of how websites ‘should be.’”</p>
+          <div class="burn-card__tags"><span>数字花园</span><span>知识管理</span></div>
+          <div class="burn-card__rule"></div>
+          <div class="burn-card__note">A note worth returning to — until it isn’t.</div>
+        </div>
+        <div class="burn-fire" id="burn-fire">
+          <div class="burn-fire__glow"></div>
+          <div class="burn-fire__char"></div>
+          <div class="burn-fire__line"></div>
+          <div class="burn-fire__lick burn-fire__lick--a"></div>
+          <div class="burn-fire__lick burn-fire__lick--b"></div>
+          <div class="burn-fire__lick burn-fire__lick--c"></div>
+          <div class="burn-sparks" id="burn-sparks"></div>
+        </div>
+        <div class="burn-ash" id="burn-ash"></div><div class="burn-gone" id="burn-gone">Gone.</div>
+      </div>
+    </div>
+
+    <div class="layer draft" id="draft">
+      <div class="grain"></div>
+      <div class="draft-copy">
+        <div class="eyebrow copy" data-copy-primary>07 / Write</div>
+        <h2 class="copy" data-copy-primary>A fragment<br><em>becomes a draft.</em></h2>
+        <p class="copy" data-copy-primary>The source and citation come with it. Write in Markdown. Export the file.</p>
+        <span class="mark copy" data-copy-secondary>MARKDOWN · CITATIONS · EXPORT</span>
+      </div>
+      <div class="screen-frame draft-frame" style="left:760px;top:112px;width:1060px">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">docs.gaojiaxiang.cn/drafts/…</span></div>
+        <img class="shot" src="assets/draft.png" alt="">
+        <div class="ann" id="draft-ann-src" style="left:160px;top:460px;width:360px;height:54px"></div>
+        <div class="ann-label" id="draft-lab-src" style="left:160px;top:422px">citation stays</div>
+        <div class="ann" id="draft-ann-export" style="left:760px;top:72px;width:170px;height:42px"></div>
+        <div class="ann-label" id="draft-lab-export" style="left:760px;top:34px">markdown</div>
+        <span class="cursor" data-cursor="draft"></span><span class="click-ring" data-cursor-ring="draft"></span>
+      </div>
+      <div class="file-chip" id="file-chip">draft.md · export</div>
+    </div>
+
+    <div class="layer media" id="media">
+      <div class="grain"></div>
+      <div class="screens-copy">
+        <div class="eyebrow copy" data-copy-primary>08 / Media</div>
+        <h2 class="copy" data-copy-primary>Files, not<br>attachments.</h2>
+        <p class="copy" data-copy-primary>Content-addressed. One copy, many references. The media library is a directory you can open.</p>
+        <span class="mark copy" data-copy-secondary>SHA256 · CONTENT ADDRESSED</span>
+      </div>
+      <div class="screen-frame">
+        <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">docs.gaojiaxiang.cn/media</span></div>
+        <img class="shot" src="assets/media.png" alt="">
+        <div class="ann" id="media-ann" style="left:190px;top:205px;width:660px;height:360px"></div>
+        <div class="ann-label" id="media-lab" style="left:190px;top:167px">one copy, many references</div>
+      </div>
+      <div class="hash-strip" id="hash-strip"><b>sha256</b><span>7f9c…c1a2</span><span>media/&lt;hash&gt;.png</span></div>
+    </div>
+
+    <div class="layer privacy" id="privacy">
+      <div class="grain"></div>
+      <div class="privacy-copy">
+        <div class="eyebrow copy" data-copy-primary>09 / Private</div>
+        <h2 class="copy" data-copy-primary>Private<br><em>by default.</em></h2>
+        <p class="copy" data-copy-primary>No analytics. No ads. No feed. One small server, behind a login. Just your own archive, on your own terms.</p>
+        <span class="mark copy" data-copy-secondary>ONE SMALL SERVER · YOURS</span>
+      </div>
+      <div class="arch">
+        <div class="arch-node sources" id="arch-sources"><b>Your surfaces</b><small>Chrome · Obsidian · uTools</small></div>
+        <div class="arch-line" id="arch-l1" style="left:320px;top:122px;width:70px"></div>
+        <div class="arch-line v" id="arch-l2" style="left:390px;top:122px;height:108px"></div>
+        <div class="arch-node portal" id="arch-portal"><b>Astro portal</b><small>login · inbox · triage · drafts</small></div>
+        <div class="arch-line" id="arch-l3" style="left:640px;top:272px;width:60px"></div>
+        <div class="arch-node db" id="arch-db"><b>SQLite</b><small>one file</small></div>
+        <div class="arch-node media-node" id="arch-media"><b>media/</b><small>content-addressed</small></div>
+        <div class="arch-line v" id="arch-l4" style="left:640px;top:300px;height:60px"></div>
+        <div class="arch-node ai" id="arch-ai"><b>AI proxy</b><small>suggests, never decides</small></div>
+        <div class="arch-line v" id="arch-l5" style="left:515px;top:360px;height:70px"></div>
+        <div class="arch-node backup" id="arch-backup"><b>Nightly backup</b><small>sqlite + media + manifest</small></div>
+        <div class="arch-line" id="arch-l6" style="left:290px;top:512px;width:100px"></div>
+        <div class="arch-pulse" id="arch-pulse"></div>
+        <div class="arch-note" id="arch-note">No third-party dashboard.<br>No growth loop.<br>No place to perform.</div>
+      </div>
+    </div>
+
+    <div class="layer backup" id="backup">
+      <div class="grain"></div>
+      <div class="backup-copy">
+        <div class="eyebrow copy" data-copy-primary>10 / Backup</div>
+        <h2 class="copy" data-copy-primary>A backup<br>you can<br><em>open.</em></h2>
+        <p class="copy" data-copy-primary>Every night: a SQLite snapshot, a media archive, a manifest. One command pulls it home. Restoring is boring.</p>
+        <span class="mark copy" data-copy-secondary>NOT A SERVICE YOU HOPE STAYS ONLINE</span>
+      </div>
+      <div class="terminal-wrap">
+        <div class="terminal" id="terminal">
+          <div class="tbar"><i></i><i></i><i></i><span>halfmu — backup</span></div>
+          <div class="tbody">
+            <div class="cmd">$ pnpm db:backup</div>
+            <div class="dim">→ portal.sqlite</div>
+            <div class="dim">→ media.tar.gz</div>
+            <div class="dim">→ manifest.json</div>
+            <div class="ok">✓ integrity_check ok</div>
+            <div class="cmd">$ pnpm db:pull</div>
+            <div class="dim">← ~/Backups/halfmu</div>
+            <div class="ok">✓ 3 snapshots, 604K</div>
+            <div class="dim">restore = open the file</div>
+          </div>
+        </div>
+        <div class="manifest" id="manifest">
+          <b>backups/20261031-041500/</b><br>
+          <span class="tree">├── portal.sqlite</span><br>
+          <span class="tree">├── media.tar.gz</span><br>
+          <span class="tree">└── manifest.json</span><br><br>
+          <span class="tree">sha256: 7f9c…c1a2</span><br>
+          <span class="tree">PRAGMA integrity_check → ok</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer closing" id="close">
+      <div class="grain"></div>
+      <div class="mark-line"><span class="cn">半亩</span><span class="en">BOTHY</span></div>
+      <h2 class="copy" data-copy-primary>Make a little room<br>for what <em>matters.</em></h2>
+      <div class="foot"><span class="dot"></span><span>PRIVATE BY DEFAULT · AI ASSISTS, YOU DECIDE</span></div>
+    </div>
+
+    <div class="layer end" id="end">
+      <div class="grain"></div>
+      <div class="end-inner">
+        <div class="cn">半亩</div>
+        <div class="en">BOTHY</div>
+        <p>A private place for what you keep.<br>Save less. Return more.</p>
+        <div class="rule"></div>
+        <div class="url">docs.gaojiaxiang.cn</div>
+      </div>
+    </div>
+
+    <div class="caption" id="caption"></div>
+    <div class="progress" id="progress"></div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('root');
+  const scene = document.getElementById('scene');
+  const DURATION = Number(root.dataset.duration);
+  const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+  const range = (t, start, end) => (end <= start ? (t >= end ? 1 : 0) : clamp((t - start) / (end - start)));
+  const easeOut = (p) => 1 - Math.pow(1 - p, 3);
+  const easeInOut = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const backOut = (p) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
+  const node = (id) => document.getElementById(id);
+  const q = (sel, scope = document) => scope.querySelector(sel);
+  const qa = (sel, scope = document) => [...scope.querySelectorAll(sel)];
+  const setLayer = (id, opacity, y = 0) => { const el = node(id); if (!el) return; el.style.opacity = String(opacity); el.style.transform = `translateY(${y}px)`; };
+  const layerOpacity = (t, start, end, fadeIn = 0.6, fadeOut = 0.6) => {
+    if (t < start || t > end) return 0;
+    const a = start === 0 ? 1 : easeInOut(range(t, start, start + fadeIn));
+    const b = 1 - easeInOut(range(t, end - fadeOut, end));
+    return clamp(Math.min(a, b));
+  };
+  const copyIn = (scope, t, start, stagger = 0.12, dur = 0.55) => {
+    qa('.copy', scope).forEach((el, i) => {
+      const p = easeOut(range(t, start + i * stagger, start + i * stagger + dur));
+      el.style.opacity = String(p);
+      el.style.transform = `translateY(${(1 - p) * 22}px)`;
+    });
+  };
+  const showAnn = (ids, t, start, end = 99) => {
+    ids.forEach((id, i) => {
+      const el = node(id); if (!el) return;
+      const p = easeOut(range(t, start + i * 0.12, start + i * 0.12 + 0.45));
+      const out = 1 - easeInOut(range(t, end - 0.35, end));
+      el.style.opacity = String(p * out);
+    });
+  };
+  const cursorMove = (key, t, from, to, start, end, click) => {
+    const el = q(`[data-cursor="${key}"]`); const ring = q(`[data-cursor-ring="${key}"]`);
+    if (!el) return;
+    const p = easeInOut(range(t, start, end));
+    const x = from[0] + (to[0] - from[0]) * p;
+    const y = from[1] + (to[1] - from[1]) * p;
+    const visible = t >= start - 0.2 && t <= end + 0.8;
+    el.style.opacity = visible ? '1' : '0';
+    el.style.transform = `translate(${x}px, ${y}px)`;
+    if (ring) {
+      const rp = range(t, click, click + 0.5);
+      ring.style.left = `${to[0]}px`; ring.style.top = `${to[1]}px`;
+      ring.style.opacity = (t >= click && t < click + 0.55) ? String((1 - rp) * 0.9) : '0';
+      ring.style.transform = `scale(${0.3 + rp * 1.9})`;
+    }
+  };
+
+  // Scene boundaries are cut to the narration, with a little air around the
+  // transitions. The narration is 145.4s; the last 20s are a held end card.
+  const S = {
+    problem: 15.0,
+    product: 22.8,
+    capture: 36.0,
+    inbox: 44.5,
+    triage: 54.8,
+    burn: 71.0,
+    draft: 83.3,
+    media: 98.8,
+    privacy: 114.2,
+    backup: 124.5,
+    close: 141.3,
+    end: 151.5,
+  };
+
+  function renderScene(time) {
+    const exit = 1 - easeInOut(range(time, DURATION - 0.8, DURATION - 0.1));
+    scene.style.opacity = String(exit);
+
+    // 00 — intro
+    const introO = layerOpacity(time, 0, S.problem + 0.4, 0.01, 0.55);
+    setLayer('intro', introO);
+    copyIn(node('intro'), time, 0.4, 0.12, 0.65);
+    qa('.card', node('intro')).forEach((el, i) => {
+      const p = backOut(range(time, 1.2 + i * 0.35, 2.0 + i * 0.35));
+      el.style.opacity = String(p * introO);
+      el.style.transform = `translateY(${(1 - p) * 30}px) rotate(${-3.5 + i * 2.2}deg)`;
+    });
+
+    // 01 — problem
+    const probO = layerOpacity(time, S.problem, S.product + 0.4, 0.55, 0.45);
+    setLayer('problem', probO);
+    copyIn(node('problem'), time, S.problem + 0.2, 0.13, 0.55);
+    qa('.lost-card', node('problem')).forEach((el, i) => {
+      const p = backOut(range(time, S.problem + 0.7 + i * 0.3, S.problem + 1.45 + i * 0.3));
+      const drift = Math.sin((time - S.problem) * 0.45 + i) * 4;
+      el.style.opacity = String(p * probO);
+      el.style.transform = `translateY(${(1 - p) * 34 + drift}px) rotate(${-3 + i * 2.2}deg)`;
+    });
+    const stamp = q('.lost-stamp', node('problem'));
+    if (stamp) stamp.style.opacity = String(0.85 * range(time, S.problem + 2.0, S.problem + 2.6) * probO);
+
+    // 02 — product
+    const prodO = layerOpacity(time, S.product, S.capture + 0.45, 0.55, 0.45);
+    setLayer('product', prodO);
+    copyIn(node('product'), time, S.product + 0.2, 0.12, 0.5);
+    qa('.source-node', node('product')).forEach((el, i) => {
+      const p = easeOut(range(time, S.product + 0.8 + i * 0.28, S.product + 1.4 + i * 0.28));
+      el.style.opacity = String(p * prodO);
+      el.style.transform = `translateY(${(1 - p) * 20}px)`;
+    });
+    const hub = q('.hub-card', node('product'));
+    if (hub) { const p = backOut(range(time, S.product + 1.8, S.product + 2.6)); hub.style.opacity = String(p * prodO); hub.style.transform = `translateY(${(1 - p) * 26}px) scale(${0.98 + p * 0.02})`; }
+    const hubLine = q('.hub-line', node('product'));
+    if (hubLine) hubLine.style.opacity = String(0.4 * range(time, S.product + 1.4, S.product + 2.3) * prodO);
+
+    // 03 — capture
+    const capO = layerOpacity(time, S.capture, S.inbox + 0.4, 0.55, 0.4);
+    setLayer('capture', capO);
+    copyIn(node('capture'), time, S.capture + 0.2, 0.12, 0.5);
+    qa('.source-panel', node('capture')).forEach((el, i) => {
+      const p = backOut(range(time, S.capture + 0.7 + i * 0.35, S.capture + 1.5 + i * 0.35));
+      const drift = Math.sin((time - S.capture) * 0.4 + i * 1.7) * 3;
+      el.style.opacity = String(p * capO);
+      el.style.transform = `translateY(${(1 - p) * 36 + drift}px) rotate(${-2 + i * 1.4}deg)`;
+    });
+    cursorMove('capture', time, [880, 590], [620, 220], S.capture + 1.8, S.capture + 3.2, S.capture + 3.3);
+
+    // 04 — inbox
+    const inbO = layerOpacity(time, S.inbox, S.triage + 0.4, 0.55, 0.4);
+    setLayer('inbox', inbO);
+    copyIn(node('inbox'), time, S.inbox + 0.2, 0.12, 0.5);
+    showAnn(['inbox-ann-src', 'inbox-lab-src', 'inbox-ann-tag', 'inbox-lab-tag'], time, S.inbox + 1.4, S.triage - 0.5);
+    cursorMove('inbox', time, [900, 550], [440, 350], S.inbox + 2.2, S.inbox + 4.0, S.inbox + 4.1);
+
+    // 05 — triage
+    const triO = layerOpacity(time, S.triage, S.burn + 0.4, 0.55, 0.4);
+    setLayer('triage', triO);
+    copyIn(node('triage'), time, S.triage + 0.2, 0.12, 0.5);
+    showAnn(['triage-ann-sum', 'triage-lab-sum', 'triage-ann-tags', 'triage-lab-tags', 'triage-ann-dup', 'triage-lab-dup'], time, S.triage + 2.0, S.burn - 0.5);
+    cursorMove('triage', time, [680, 500], [380, 300], S.triage + 3.2, S.triage + 5.0, S.triage + 5.1);
+
+    // 06 — burn
+    const burnO = layerOpacity(time, S.burn, S.draft + 0.35, 0.01, 0.35);
+    setLayer('burn', burnO);
+    copyIn(node('burn'), time, S.burn + 0.25, 0.12, 0.5);
+    const burnStart = 77.0;
+    const bp = easeInOut(range(time, burnStart, burnStart + 4.8));
+    const bottom = 102 - bp * 112;
+    const card = node('burn-card');
+    if (card) {
+      const xs = [0, 5, 11, 17, 22, 28, 34, 39, 45, 51, 57, 63, 69, 74, 80, 86, 91, 96, 100];
+      const jag = [0, -2, 1.8, -1.1, 2.3, -2.5, 1.2, -1.8, 2.6, -1.2, 1.7, -2.2, 2.1, -1.4, 2.5, -1.8, 1.1, -2.4, 0];
+      const rev = [...xs].reverse(); const rj = [...jag].reverse();
+      card.style.clipPath = `polygon(0 0, 100% 0, ${rev.map((x, i) => `${x}% ${bottom + rj[i]}%`).join(', ')}, 0 0)`;
+      card.style.transform = `perspective(900px) rotateX(${bp * 10}deg) rotate(${-2 - bp * 1.2}deg) translateY(${-bp * 12}px) scale(${1 - bp * 0.055})`;
+      card.style.filter = `brightness(${1 - bp * 0.18}) sepia(${bp * 0.32}) contrast(${1 + bp * 0.08})`;
+      card.style.opacity = String(1 - easeInOut(range(bp, 0.8, 0.99)));
+    }
+    const fire = node('burn-fire');
+    if (fire) {
+      fire.style.opacity = bp > 0.01 && bp < 0.985 ? '1' : '0';
+      const h = card ? card.offsetHeight : 440;
+      fire.style.top = `${60 + h * (bottom / 100) - 54}px`;
+      fire.style.transform = `scaleX(${0.985 + Math.sin(time * 11) * 0.01})`;
+    }
+    const licks = [q('.burn-fire__lick--a', node('burn')), q('.burn-fire__lick--b', node('burn')), q('.burn-fire__lick--c', node('burn'))];
+    licks.forEach((el, i) => { if (el) el.style.transform = `scale(${0.9 + Math.sin(time * (19 + i * 3) + i) * 0.12}, ${0.85 + Math.cos(time * (23 + i * 2)) * 0.16})`; });
+    const sparks = node('burn-sparks');
+    if (sparks) {
+      if (!sparks.childElementCount) for (let i = 0; i < 14; i += 1) { const s = document.createElement('span'); s.className = 'burn-spark'; s.style.left = `${8 + i * 6.4}%`; sparks.append(s); }
+      [...sparks.children].forEach((spark, i) => {
+        const phase = (time * 2.2 + i * 0.173) % 1;
+        const x = Math.sin(i * 2.4 + time * 2.5) * 12;
+        const y = 18 + phase * (48 + (i % 4) * 12);
+        spark.style.transform = `translate(${x}px, ${-y}px) scale(${0.7 + (i % 3) * 0.22})`;
+        spark.style.opacity = String((1 - phase) * (0.35 + (i % 5) * 0.12) * (bp > 0.01 ? 1 : 0));
+      });
+    }
+    const ash = node('burn-ash'); if (ash) ash.style.opacity = String(easeOut(range(bp, 0.82, 1)) * 0.8);
+    const gone = node('burn-gone'); if (gone) gone.style.opacity = String(easeOut(range(bp, 0.86, 1)) * 0.75);
+
+    // 07 — draft
+    const draftO = layerOpacity(time, S.draft, S.media + 0.4, 0.55, 0.4);
+    setLayer('draft', draftO);
+    copyIn(node('draft'), time, S.draft + 0.2, 0.12, 0.5);
+    showAnn(['draft-ann-src', 'draft-lab-src', 'draft-ann-export', 'draft-lab-export'], time, S.draft + 1.8, S.media - 0.5);
+    cursorMove('draft', time, [520, 500], [820, 170], S.draft + 2.8, S.draft + 4.6, S.draft + 4.7);
+    const chip = node('file-chip'); if (chip) { const p = backOut(range(time, S.draft + 3.4, S.draft + 4.2)); chip.style.opacity = String(p * draftO); chip.style.transform = `translateY(${(1 - p) * 16}px)`; }
+
+    // 08 — media
+    const mediaO = layerOpacity(time, S.media, S.privacy + 0.4, 0.55, 0.4);
+    setLayer('media', mediaO);
+    copyIn(node('media'), time, S.media + 0.2, 0.12, 0.5);
+    showAnn(['media-ann', 'media-lab'], time, S.media + 1.6, S.privacy - 0.5);
+    const hash = node('hash-strip'); if (hash) { const p = easeOut(range(time, S.media + 2.6, S.media + 3.2)); hash.style.opacity = String(p * mediaO); hash.style.transform = `translateY(${(1 - p) * 14}px)`; }
+
+    // 09 — privacy
+    const privacyO = layerOpacity(time, S.privacy, S.backup + 0.4, 0.55, 0.4);
+    setLayer('privacy', privacyO);
+    copyIn(node('privacy'), time, S.privacy + 0.2, 0.12, 0.5);
+    qa('.arch-node', node('privacy')).forEach((el, i) => {
+      const p = backOut(range(time, S.privacy + 0.9 + i * 0.18, S.privacy + 1.55 + i * 0.18));
+      el.style.opacity = String(p * privacyO);
+      el.style.transform = `translateY(${(1 - p) * 18}px)`;
+    });
+    qa('.arch-line', node('privacy')).forEach((el, i) => { el.style.opacity = String(0.55 * range(time, S.privacy + 1.6 + i * 0.1, S.privacy + 2.1 + i * 0.1) * privacyO); });
+    const archNote = node('arch-note'); if (archNote) archNote.style.opacity = String(range(time, S.privacy + 2.8, S.privacy + 3.4) * privacyO);
+    const pulse = node('arch-pulse'); if (pulse) { const pp = (time * 0.8) % 1; pulse.style.left = `${390 + pp * 250}px`; pulse.style.top = '272px'; pulse.style.opacity = String(0.9 * privacyO); }
+
+    // 10 — backup
+    const backupO = layerOpacity(time, S.backup, S.close + 0.4, 0.55, 0.4);
+    setLayer('backup', backupO);
+    copyIn(node('backup'), time, S.backup + 0.2, 0.12, 0.5);
+    const term = node('terminal'); if (term) { const p = backOut(range(time, S.backup + 1.0, S.backup + 1.8)); term.style.opacity = String(p * backupO); term.style.transform = `translateY(${(1 - p) * 22}px)`; }
+    const man = node('manifest'); if (man) { const p = backOut(range(time, S.backup + 3.2, S.backup + 3.9)); man.style.opacity = String(p * backupO); man.style.transform = `translateY(${(1 - p) * 18}px)`; }
+
+    // 11 — close
+    const closeO = layerOpacity(time, S.close, S.end + 0.5, 0.5, 0.5);
+    setLayer('close', closeO);
+    copyIn(node('close'), time, S.close + 0.2, 0.13, 0.6);
+
+    // 12 — end
+    const endO = layerOpacity(time, S.end, DURATION + 1, 0.6, 0.4);
+    setLayer('end', endO);
+
+    // Captions: derived from the narration's own pauses.
+    const CAPTIONS = [
+      [0.8, 5.1, 'Every day, we save a little more.'],
+      [5.1, 10.2, 'A quote. A link. A screenshot. A paragraph.'],
+      [10.8, 14.2, 'And then, mostly, we don’t come back.'],
+      [15.2, 18.1, 'The problem isn’t capture. It’s return.'],
+      [18.6, 21.9, 'We save for a future self who never gets the file.'],
+      [23.1, 28.0, 'So we built this: a small, private place for the things you mean to keep.'],
+      [29.1, 35.2, 'One inbox. Not a feed. Not a social profile.'],
+      [36.2, 39.8, 'Capture from the browser, Obsidian, or uTools.'],
+      [40.5, 44.2, 'A selection, a whole page, a link, an image.'],
+      [44.9, 48.9, 'Everything lands in the same inbox.'],
+      [49.4, 53.7, 'The URL, the title, the site, the moment you saved it.'],
+      [54.9, 57.3, 'When you’re ready, open Triage.'],
+      [58.0, 64.7, 'The assistant reads what you saved: a summary, a few tags, maybe a duplicate.'],
+      [65.6, 69.9, 'Apply what helps. Ignore the rest.'],
+      [71.0, 76.9, 'And when something no longer belongs, let it go.'],
+      [77.6, 82.0, 'The card curls, the embers lift, and the inbox gets lighter.'],
+      [83.3, 88.1, 'Some fragments want to become something more.'],
+      [88.6, 93.7, 'Turn one into a draft. The source and citation come with it.'],
+      [94.5, 97.5, 'The loop closes in something you can actually use.'],
+      [98.8, 105.5, 'Images are content-addressed files. The index is SQLite.'],
+      [106.3, 111.1, 'The database is one file. Media is a directory.'],
+      [112.2, 115.6, 'The whole thing runs on one small server, behind a login.'],
+      [116.6, 120.2, 'No analytics. No ads. No feed.'],
+      [121.1, 123.8, 'Just your own archive, on your own terms.'],
+      [125.2, 129.1, 'Every night, a snapshot. One command pulls it home.'],
+      [130.0, 132.6, 'Not a service you hope stays online.'],
+      [133.8, 140.2, 'Because the backup is just a file, restoring is boring.'],
+      [141.3, 145.4, 'A private place for what you keep. Save less. Return more.'],
+    ];
+    const active = CAPTIONS.find(([a, b]) => time >= a && time < b);
+    const cap = node('caption');
+    if (cap) { cap.textContent = active ? active[2] : ''; cap.style.opacity = active ? '1' : '0'; }
+    const progress = node('progress'); if (progress) progress.style.width = `${(time / DURATION) * 100}%`;
+  }
+
+  class SeekableTimeline {
+    constructor(duration, render) { this._duration = duration; this._render = render; this._time = 0; this._rate = 1; this._frame = 0; this._last = null; }
+    seek(seconds) { this._time = Math.min(this._duration, Math.max(0, Number(seconds) || 0)); this._render(this._time); }
+    time() { return this._time; }
+    duration() { return this._duration; }
+    pause() { if (this._frame) cancelAnimationFrame(this._frame); this._frame = 0; this._last = null; }
+    play() { this.pause(); this._last = null; const tick = (now) => { if (this._last === null) this._last = now; const dt = (now - this._last) / 1000; this._last = now; this._time = Math.min(this._duration, this._time + dt * this._rate); this._render(this._time); if (this._time < this._duration) this._frame = requestAnimationFrame(tick); }; this._frame = requestAnimationFrame(tick); }
+  }
+  const timeline = new SeekableTimeline(DURATION, renderScene);
+  window.__timelines = { main: timeline };
+  timeline.seek(0);
+})();
+</script>
+</body>
+</html>

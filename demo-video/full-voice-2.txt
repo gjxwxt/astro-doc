@@ -1,0 +1,5 @@
+When you're ready, open Triage. The assistant reads what you saved and suggests a summary, a few tags, maybe a duplicate. Apply what helps. Ignore the rest. Nothing is rewritten behind your back.
+
+And when something no longer belongs, let it go. Delete is not a database operation. The card curls, the embers lift, and the inbox gets lighter.
+
+Some fragments want to become something more. Turn one into a draft. The source and citation come with it. Write in Markdown. Export the file. The loop closes in something you can actually use.
