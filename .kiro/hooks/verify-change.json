@@ -1,0 +1,12 @@
+{
+  "id": "verify-change",
+  "name": "Verify this change",
+  "comment": "User-triggered verification gate. Runs the same commands as the repo's AGENTS.md and reports the first actionable failure.",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the full verification gate for this repository: `pnpm check` followed by `pnpm build`. Do not edit files during this hook. If a command fails, report the exact command, the first actionable error, and the files most likely responsible. If everything passes, report the test count and the build result. Do not claim success from a partial run."
+  }
+}

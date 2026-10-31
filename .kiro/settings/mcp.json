@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "halfmu-portal": {
+      "command": "pnpm",
+      "args": [
+        "--filter",
+        "@portal/mcp-server",
+        "dev"
+      ],
+      "env": {
+        "PRIVATE_API_TOKEN": "",
+        "PORTAL_API_TOKEN": "",
+        "PORTAL_URL": "http://localhost:4321"
+      }
+    }
+  }
+}
