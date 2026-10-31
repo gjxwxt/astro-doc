@@ -345,7 +345,7 @@ export function createDraft(
   db: DatabaseSync,
   ownerId: string,
   input: {
-    synthesisRunId: string;
+    synthesisRunId: string | null;
     title: string;
     slug: string;
     markdown: string;

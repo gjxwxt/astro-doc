@@ -27,7 +27,8 @@
     "mcp": "pnpm --filter @portal/mcp-server start",
     "mcp:dev": "pnpm --filter @portal/mcp-server dev",
     "mcp:build": "pnpm --filter @portal/mcp-server build",
-    "build:all": "pnpm build && pnpm mcp:build"
+    "build:all": "pnpm build && pnpm mcp:build",
+    "db:pull": "bash scripts/pull-backups.sh"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.9",

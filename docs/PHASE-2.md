@@ -169,8 +169,8 @@ Phase 2 只生成**新文章**。改旧文章、insert-only diff、自动开 PR�
 - `/drafts/[id]`：标题、状态、Markdown 编辑、实时预览、来源侧栏；⌘/Ctrl+S 保存
 - 删除是软删除（`drafts.deleted_at`），撤销会恢复同一篇草稿，不碰原始碎片
 - 导出 `text/markdown`，带 `title / date / tags / status` frontmatter，并在正文后追加 `## 来源`
-- 备份：`pnpm db:backup` 用 `VACUUM INTO` 生成一致快照，默认写入 `data/backups/`
-- 恢复：`pnpm db:restore <backup.sqlite>`；恢复前先停服务，脚本会先保存当前库快照
+- 备份：`pnpm db:backup` 用 `VACUUM INTO` 生成数据库快照，并把 `media/` 打包到同一份备份目录；服务器每天 04:15 自动运行
+- 恢复：`pnpm db:restore <backup-dir> [--include-media]`；恢复前先停服务，脚本会先保存当前库快照
 
 验收：
 
@@ -495,16 +495,19 @@ status: draft
 
 ```bash
 pnpm db:backup
-# ✓ data/backups/portal-...sqlite
+# ✓ data/backups/20261031-005230/{portal.sqlite,media.tar.gz,manifest.json}
 
 # 先停 josh-portal
-pnpm db:restore data/backups/portal-...sqlite
+pnpm db:restore data/backups/20261031-005230 --include-media
 ```
 
-- 备份用 SQLite `VACUUM INTO`，WAL 模式下也是一致快照
-- 恢复前脚本会把当前库复制成 `portal.before-restore-...sqlite`
-- 备份目录默认在 `data/` 下，已被 `.gitignore` 排除
+- 备份用 SQLite `VACUUM INTO`，WAL 模式下也是一致快照；媒体单独打成 `media.tar.gz`
+- 服务器已装 `josh-portal-backup.timer`，每天 04:15 备份，默认保留 14 份
+- Mac 侧可用 `HALFMU_HOST=... pnpm db:pull` 拉一份异地副本
+- 恢复前脚本会把当前库复制成 `portal.before-restore-...sqlite`；`--include-media` 才会覆盖媒体
 - 备份文件含私人碎片，不要提交、不要上传公开网盘
+
+完整说明见 [备份与恢复](./BACKUP.md)。
 
 ---
 
@@ -616,7 +619,7 @@ extension/
 - systemd 增加 `PORTAL_DATA_DIR=/opt/josh-portal/data`
 - `data/` 和 `.env` 不随 release 覆盖
 - 部署只替换 `dist`，不碰数据库
-- 迁移前备份：`/opt/josh-portal/backups/portal-YYYYMMDD.sqlite`
+- 迁移前备份：`pnpm db:backup`（或让 `josh-portal-backup.timer` 先跑一次），确认 `/opt/josh-portal/backups/<时间>/portal.sqlite` 存在
 - 每日备份 + 保留 7 天
 - 健康检查增加数据库可读状态
 - GitHub Action 部署前跑 `pnpm check`

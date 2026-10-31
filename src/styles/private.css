@@ -4304,13 +4304,14 @@
   gap: 8px;
   align-items: stretch;
   justify-content: flex-end;
-  min-width: 104px;
+  min-width: 132px;
 }
 
 .organize-actions .private-button {
   min-height: 34px;
-  padding: 0 11px;
+  padding: 0 9px;
   font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .organize-empty {
@@ -4382,6 +4383,122 @@
 
 @media (prefers-reduced-motion: reduce) {
   .organize-item {
+    transition: none;
+  }
+}
+
+/* Triage actions */
+.organize-select {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.organize-select input,
+.organize-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--forest-600);
+  cursor: pointer;
+}
+
+.organize-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--paper) 88%, var(--lime));
+}
+
+.organize-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  font-size: var(--step-1);
+  cursor: pointer;
+}
+
+.organize-bulk .private-button {
+  margin-left: auto;
+}
+
+.organize-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.organize-action-row .private-button {
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.organize-item.is-removing {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.organize-duplicate-row {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+}
+
+.organize-merge {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in oklab, var(--forest-600) 38%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--lime) 22%, var(--paper));
+  color: var(--forest-700);
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
+.organize-merge:hover {
+  border-color: var(--forest-600);
+  background: color-mix(in oklab, var(--lime) 40%, var(--paper));
+}
+
+.organize-merge:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+@media (max-width: 760px) {
+  .organize-select {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+  }
+
+  .organize-item {
+    position: relative;
+    padding-left: 44px;
+  }
+
+  .organize-bulk .private-button {
+    margin-left: 0;
+  }
+
+  .organize-action-row {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organize-item.is-removing {
     transition: none;
   }
 }

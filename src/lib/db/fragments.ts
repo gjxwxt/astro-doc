@@ -488,6 +488,101 @@ export function updateFragmentImage(
   return getFragment(db, ownerId, id);
 }
 
+export function updateFragmentsStatus(
+  db: DatabaseSync,
+  ownerId: string,
+  ids: string[],
+  status: string,
+): number {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))].slice(0, 100);
+  if (unique.length === 0) return 0;
+  const nextStatus = cleanText(status, 40);
+  if (!['inbox', 'archived'].includes(nextStatus)) {
+    throw new FragmentError('INVALID_INPUT', 'status 只能是 inbox 或 archived。');
+  }
+  const now = new Date().toISOString();
+  const placeholders = unique.map(() => '?').join(', ');
+  try {
+    db.exec('BEGIN IMMEDIATE');
+    const result = db
+      .prepare(
+        `UPDATE fragments SET status = ?, updated_at = ? WHERE owner_id = ? AND deleted_at IS NULL AND id IN (${placeholders})`,
+      )
+      .run(nextStatus, now, ownerId, ...unique);
+    db.exec('COMMIT');
+    return Number(result.changes);
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      /* already closed */
+    }
+    throw error;
+  }
+}
+
+export function mergeFragments(
+  db: DatabaseSync,
+  ownerId: string,
+  targetId: string,
+  duplicateId: string,
+): Fragment | null {
+  if (targetId === duplicateId) {
+    throw new FragmentError('INVALID_INPUT', '不能把一条碎片合并到它自己。');
+  }
+  const target = getFragment(db, ownerId, targetId);
+  const duplicate = getFragment(db, ownerId, duplicateId);
+  if (!target || !duplicate) return null;
+
+  const note = cleanText(
+    [target.note, duplicate.note].filter(Boolean).join('\n\n').slice(0, MAX_NOTE_LENGTH),
+    MAX_NOTE_LENGTH,
+  );
+  const tags = normalizeTags([...new Set([...target.tags, ...duplicate.tags])].slice(0, MAX_TAGS));
+  const previousMerged = Array.isArray(target.metadata.mergedFrom)
+    ? target.metadata.mergedFrom.filter((item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+      )
+    : [];
+  const mergedFrom = [
+    ...previousMerged,
+    {
+      id: duplicate.id,
+      quote: duplicate.quote.slice(0, 500),
+      sourceUrl: duplicate.sourceUrl,
+      sourceTitle: duplicate.sourceTitle,
+      mergedAt: new Date().toISOString(),
+    },
+  ].slice(-20);
+  const metadata = JSON.stringify({ ...target.metadata, mergedFrom });
+  if (metadata.length > 20_000) {
+    throw new FragmentError('INVALID_INPUT', '合并后的元数据太大。');
+  }
+  const now = new Date().toISOString();
+
+  try {
+    db.exec('BEGIN IMMEDIATE');
+    db.prepare(
+      'UPDATE fragments SET note = ?, metadata_json = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
+    ).run(note, metadata, now, targetId, ownerId);
+    db.prepare('DELETE FROM fragment_tags WHERE fragment_id = ?').run(targetId);
+    const insertTag = db.prepare('INSERT INTO fragment_tags (fragment_id, tag) VALUES (?, ?)');
+    for (const tag of tags) insertTag.run(targetId, tag);
+    db.prepare(
+      'UPDATE fragments SET deleted_at = ?, updated_at = ? WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
+    ).run(now, now, duplicateId, ownerId);
+    db.exec('COMMIT');
+    return getFragment(db, ownerId, targetId);
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      /* already closed */
+    }
+    throw error;
+  }
+}
+
 export function softDeleteFragment(db: DatabaseSync, ownerId: string, id: string): boolean {
   const now = new Date().toISOString();
   const result = db
